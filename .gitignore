@@ -1,7 +1,80 @@
+# Anchor / Solana
 .anchor
 .DS_Store
 target
 **/*.rs.bk
-node_modules
 test-ledger
 .yarn
+*.so
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production builds
+dist/
+build/
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+relayer.log
+relayer-*.log
+validator.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+.cache/
+.temp/
+tmp/
+
+# Keys (IMPORTANT - never commit private keys!)
+*.json.key
+*-keypair.json
+id.json
+*.pem
+
+# Backup files
+*.bak
+*.backup
+
+# OS
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Optional caches
+.npm
+.eslintcache
+
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
