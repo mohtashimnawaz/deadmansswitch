@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { Program, AnchorProvider } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import idl from "../../../target/idl/deadmansswitch.json";
-import { Deadmansswitch } from "../../../target/types/deadmansswitch";
+import idl from "../idl/deadmansswitch.json";
+import { Deadmansswitch } from "../idl/deadmansswitch";
 
 const programId = new PublicKey(idl.address);
 

@@ -58,89 +58,125 @@ export const MySwitches: FC = () => {
   };
 
   const getStatusColor = (status: any): string => {
-    if (status.active) return "text-green-400";
-    if (status.expired) return "text-red-400";
-    if (status.canceled) return "text-gray-400";
-    return "text-gray-400";
+    if (status.active) return "text-green-600";
+    if (status.expired) return "text-red-600";
+    if (status.canceled) return "text-gray-600";
+    return "text-gray-600";
   };
 
   const getStatusText = (status: any): string => {
-    if (status.active) return "Active";
-    if (status.expired) return "Expired";
-    if (status.canceled) return "Canceled";
+    if (status.active) return "✅ Active";
+    if (status.expired) return "⚠️ Expired";
+    if (status.canceled) return "❌ Canceled";
     return "Unknown";
   };
 
   if (!publicKey) {
     return (
-      <div className="bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
-        <h2 className="text-2xl font-bold text-white mb-4">My Switches</h2>
-        <p className="text-gray-400">Connect your wallet to view your switches</p>
+      <div className="card p-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="text-3xl">📊</div>
+          <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
+        </div>
+        <div className="text-center py-8">
+          <div className="text-6xl mb-4">🔒</div>
+          <p className="text-gray-600">Connect your wallet to view your switches</p>
+        </div>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
-        <h2 className="text-2xl font-bold text-white mb-4">My Switches</h2>
-        <p className="text-gray-400">Loading...</p>
+      <div className="card p-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="text-3xl">📊</div>
+          <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
+        </div>
+        <div className="text-center py-8">
+          <div className="text-4xl mb-4 animate-spin">⏳</div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
 
   if (!switchData) {
     return (
-      <div className="bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
-        <h2 className="text-2xl font-bold text-white mb-4">My Switches</h2>
-        <p className="text-gray-400">No switches found. Create one to get started!</p>
+      <div className="card p-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="text-3xl">📊</div>
+          <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
+        </div>
+        <div className="text-center py-8">
+          <div className="text-6xl mb-4">🆕</div>
+          <p className="text-gray-600">No switches found. Create one to get started!</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
-      <h2 className="text-2xl font-bold text-white mb-4">My Switches</h2>
+    <div className="card p-8">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="text-3xl">📊</div>
+        <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
+      </div>
 
       <div className="space-y-4">
-        <div className="bg-gray-700 rounded-lg p-4">
-          <div className="flex justify-between items-start mb-3">
+        <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+          <div className="flex justify-between items-start mb-4">
             <div>
-              <h3 className="text-lg font-semibold text-white">Your Switch</h3>
-              <p className={`text-sm ${getStatusColor(switchData.status)}`}>
+              <h3 className="text-xl font-semibold text-gray-800 mb-1">🛡️ Your Switch</h3>
+              <p className={`text-sm font-medium ${getStatusColor(switchData.status)}`}>
                 {getStatusText(switchData.status)}
               </p>
             </div>
             <button
               onClick={loadSwitch}
-              className="text-sm text-purple-400 hover:text-purple-300"
+              className="text-sm font-medium text-purple-600 hover:text-purple-700 px-3 py-1 rounded-lg hover:bg-purple-100 transition-all"
             >
-              Refresh
+              🔄 Refresh
             </button>
           </div>
 
-          <div className="space-y-2 text-sm">
-            <div>
-              <span className="text-gray-400">Timeout:</span>
-              <span className="text-white ml-2">
+          <div className="space-y-3">
+            <div className="bg-white/60 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">⏰</span>
+                <span className="text-sm font-medium text-gray-600">Timeout Period</span>
+              </div>
+              <span className="text-lg font-bold text-gray-800">
                 {Math.floor(switchData.timeoutSeconds / 3600)} hours
+              </span>
+              <span className="text-sm text-gray-600 ml-2">
+                ({Math.floor(switchData.timeoutSeconds / 86400)} days)
               </span>
             </div>
 
-            <div>
-              <span className="text-gray-400">Time Remaining:</span>
-              <span className="text-white ml-2">
+            <div className="bg-white/60 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">⌛</span>
+                <span className="text-sm font-medium text-gray-600">Time Remaining</span>
+              </div>
+              <span className="text-lg font-bold text-gray-800">
                 {getTimeRemaining(switchData.heartbeatDeadline)}
               </span>
             </div>
 
-            <div>
-              <span className="text-gray-400">Beneficiaries:</span>
-              <div className="mt-1 space-y-1">
+            <div className="bg-white/60 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">👥</span>
+                <span className="text-sm font-medium text-gray-600">Beneficiaries</span>
+              </div>
+              <div className="space-y-2">
                 {switchData.beneficiaries.map((b, i) => (
-                  <div key={i} className="text-xs text-white bg-gray-600 rounded p-2">
-                    <div className="truncate">{b.address.toString()}</div>
-                    <div className="text-gray-300">{(b.shareBps / 100).toFixed(2)}%</div>
+                  <div key={i} className="bg-white rounded-lg p-3 border border-gray-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-purple-600">Beneficiary {i + 1}</span>
+                      <span className="text-sm font-bold text-gray-800">{(b.shareBps / 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="text-xs text-gray-600 font-mono truncate">{b.address.toString()}</div>
                   </div>
                 ))}
               </div>

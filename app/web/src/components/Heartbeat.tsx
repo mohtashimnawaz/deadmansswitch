@@ -42,19 +42,22 @@ export const Heartbeat: FC = () => {
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
-      <h2 className="text-2xl font-bold text-white mb-4">Send Heartbeat</h2>
-      <p className="text-gray-400 mb-4">
-        Send a heartbeat to prove you're alive and extend your deadline.
+    <div className="card p-8">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="text-3xl animate-pulse">💓</div>
+        <h2 className="text-2xl font-bold text-gray-800">Send Heartbeat</h2>
+      </div>
+      <p className="text-gray-600 mb-6">
+        Prove you're alive and extend your deadline. Keep your switch active!
       </p>
 
       <button
         onClick={sendHeartbeat}
         disabled={loading || !publicKey}
-        className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
+        className="w-full py-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-xl text-lg flex items-center justify-center gap-2"
       >
         <span className="text-2xl">❤️</span>
-        {loading ? "Sending..." : "I'm Alive!"}
+        {loading ? "⏳ Sending..." : "I'm Alive!"}
       </button>
     </div>
   );
