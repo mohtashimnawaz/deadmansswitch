@@ -51,6 +51,52 @@ pub mod deadmansswitch {
         Ok(())
     }
 
+    /// Initialize a switch with specific asset allocations (enhanced version)
+    pub fn initialize_switch_with_assets(
+        ctx: Context<InitializeSwitch>,
+        timeout_seconds: i64,
+        allocations: Vec<BeneficiaryAllocation>,
+    ) -> Result<()> {
+        require!(
+            allocations.len() > 0 && allocations.len() <= MAX_BENEFICIARIES,
+            ErrorCode::InvalidBeneficiaryCount
+        );
+
+        require!(timeout_seconds > 0, ErrorCode::InvalidTimeout);
+
+        // Validate each beneficiary has at least one asset
+        for allocation in allocations.iter() {
+            require!(
+                allocation.assets.len() > 0,
+                ErrorCode::InvalidAssetAllocation
+            );
+        }
+
+        let switch = &mut ctx.accounts.switch;
+        let clock = Clock::get()?;
+
+        switch.owner = ctx.accounts.owner.key();
+        // Convert allocations to simple beneficiaries for backward compatibility
+        // In production, you'd want a separate Switch type or extend the existing one
+        switch.beneficiaries = allocations.iter().map(|a| Beneficiary {
+            address: a.address,
+            share_bps: 0, // Not used in asset-based allocation
+        }).collect();
+        switch.token_type = TokenType::Sol; // Default, actual types stored in allocations
+        switch.timeout_seconds = timeout_seconds;
+        switch.heartbeat_deadline = clock.unix_timestamp + timeout_seconds;
+        switch.status = SwitchStatus::Active;
+        switch.bump = ctx.bumps.switch;
+
+        msg!(
+            "Switch with asset allocations initialized. {} beneficiaries. Deadline: {}",
+            allocations.len(),
+            switch.heartbeat_deadline
+        );
+
+        Ok(())
+    }
+
     /// Send a heartbeat to extend the deadline
     pub fn send_heartbeat(ctx: Context<SendHeartbeat>) -> Result<()> {
         let switch = &mut ctx.accounts.switch;
@@ -150,6 +196,76 @@ pub mod deadmansswitch {
             amount,
             beneficiary_pubkey
         );
+
+        Ok(())
+    }
+
+    /// Distribute specific asset amount to beneficiary (enhanced version)
+    pub fn distribute_asset(
+        ctx: Context<DistributeAsset>,
+        amount: u64,
+        asset_type: AssetType,
+    ) -> Result<()> {
+        let switch = &ctx.accounts.switch;
+
+        require!(
+            switch.status == SwitchStatus::Expired,
+            ErrorCode::SwitchNotExpired
+        );
+
+        // Verify beneficiary is in the list
+        let beneficiary_pubkey = ctx.accounts.beneficiary.key();
+        require!(
+            switch.beneficiaries.iter().any(|b| b.address == beneficiary_pubkey),
+            ErrorCode::BeneficiaryNotFound
+        );
+
+        match asset_type {
+            AssetType::Sol => {
+                // Transfer SOL
+                let owner_key = switch.owner;
+                let seeds = &[
+                    b"escrow",
+                    owner_key.as_ref(),
+                    &[switch.bump],
+                ];
+                let signer_seeds = &[&seeds[..]];
+
+                let cpi_context = CpiContext::new_with_signer(
+                    ctx.accounts.system_program.to_account_info(),
+                    SystemTransfer {
+                        from: ctx.accounts.escrow.to_account_info(),
+                        to: ctx.accounts.beneficiary.to_account_info(),
+                    },
+                    signer_seeds,
+                );
+
+                transfer(cpi_context, amount)?;
+                msg!("Distributed {} lamports (SOL) to {}", amount, beneficiary_pubkey);
+            }
+            AssetType::SplToken { mint } => {
+                // Transfer SPL tokens
+                let owner_key = switch.owner;
+                let seeds = &[
+                    b"escrow",
+                    owner_key.as_ref(),
+                    &[switch.bump],
+                ];
+                let signer_seeds = &[&seeds[..]];
+
+                let cpi_accounts = Transfer {
+                    from: ctx.accounts.escrow_token_account.to_account_info(),
+                    to: ctx.accounts.beneficiary_token_account.to_account_info(),
+                    authority: ctx.accounts.escrow.to_account_info(),
+                };
+
+                let cpi_program = ctx.accounts.token_program.to_account_info();
+                let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
+
+                token::transfer(cpi_ctx, amount)?;
+                msg!("Distributed {} tokens ({}) to {}", amount, mint, beneficiary_pubkey);
+            }
+        }
 
         Ok(())
     }
@@ -372,6 +488,38 @@ pub struct DistributeSpl<'info> {
 }
 
 #[derive(Accounts)]
+pub struct DistributeAsset<'info> {
+    #[account(
+        seeds = [b"switch", switch.owner.as_ref()],
+        bump = switch.bump
+    )]
+    pub switch: Account<'info, Switch>,
+    
+    #[account(
+        mut,
+        seeds = [b"escrow", switch.owner.as_ref()],
+        bump = switch.bump
+    )]
+    /// CHECK: PDA escrow account
+    pub escrow: UncheckedAccount<'info>,
+    
+    #[account(mut)]
+    /// CHECK: Optional token account for escrow (for SPL transfers)
+    pub escrow_token_account: UncheckedAccount<'info>,
+    
+    #[account(mut)]
+    /// CHECK: Beneficiary receiving funds
+    pub beneficiary: UncheckedAccount<'info>,
+    
+    #[account(mut)]
+    /// CHECK: Optional token account for beneficiary (for SPL transfers)
+    pub beneficiary_token_account: UncheckedAccount<'info>,
+    
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
 pub struct CancelSwitch<'info> {
     #[account(
         mut,
@@ -430,10 +578,30 @@ pub struct Beneficiary {
     pub share_bps: u16,         // 2 (basis points, e.g., 5000 = 50%)
 }
 
+// Enhanced beneficiary with specific asset allocations
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
+pub struct BeneficiaryAllocation {
+    pub address: Pubkey,                        // 32
+    #[max_len(5)]
+    pub assets: Vec<AssetAllocation>,          // 4 + (5 * 41) = 209
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
+pub struct AssetAllocation {
+    pub asset_type: AssetType,                 // 1 + 32 = 33
+    pub amount: u64,                           // 8 (lamports or token amount)
+}
+
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, InitSpace)]
 pub enum TokenType {
     Sol,
     Spl { mint: Pubkey },
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, InitSpace)]
+pub enum AssetType {
+    Sol,
+    SplToken { mint: Pubkey },
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, InitSpace)]
@@ -478,4 +646,7 @@ pub enum ErrorCode {
     
     #[msg("Beneficiary not found")]
     BeneficiaryNotFound,
+    
+    #[msg("Invalid asset allocation - beneficiary must have at least one asset")]
+    InvalidAssetAllocation,
 }

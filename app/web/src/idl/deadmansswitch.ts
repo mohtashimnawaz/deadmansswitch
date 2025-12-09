@@ -63,6 +63,105 @@ export type Deadmansswitch = {
       "args": []
     },
     {
+      "name": "distributeAsset",
+      "docs": [
+        "Distribute specific asset amount to beneficiary (enhanced version)"
+      ],
+      "discriminator": [
+        117,
+        26,
+        134,
+        108,
+        27,
+        159,
+        126,
+        102
+      ],
+      "accounts": [
+        {
+          "name": "switch",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  119,
+                  105,
+                  116,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "switch.owner",
+                "account": "switch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "switch.owner",
+                "account": "switch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrowTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "beneficiary",
+          "writable": true
+        },
+        {
+          "name": "beneficiaryTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "assetType",
+          "type": {
+            "defined": {
+              "name": "assetType"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "distributeSol",
       "docs": [
         "Distribute SOL from escrow to beneficiaries"
@@ -313,6 +412,94 @@ export type Deadmansswitch = {
       ]
     },
     {
+      "name": "initializeSwitchWithAssets",
+      "docs": [
+        "Initialize a switch with specific asset allocations (enhanced version)"
+      ],
+      "discriminator": [
+        227,
+        144,
+        50,
+        91,
+        115,
+        209,
+        126,
+        97
+      ],
+      "accounts": [
+        {
+          "name": "switch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  119,
+                  105,
+                  116,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "timeoutSeconds",
+          "type": "i64"
+        },
+        {
+          "name": "allocations",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "beneficiaryAllocation"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "sendHeartbeat",
       "docs": [
         "Send a heartbeat to extend the deadline"
@@ -546,9 +733,54 @@ export type Deadmansswitch = {
       "code": 6009,
       "name": "beneficiaryNotFound",
       "msg": "Beneficiary not found"
+    },
+    {
+      "code": 6010,
+      "name": "invalidAssetAllocation",
+      "msg": "Invalid asset allocation - beneficiary must have at least one asset"
     }
   ],
   "types": [
+    {
+      "name": "assetAllocation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "assetType",
+            "type": {
+              "defined": {
+                "name": "assetType"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "assetType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "sol"
+          },
+          {
+            "name": "splToken",
+            "fields": [
+              {
+                "name": "mint",
+                "type": "pubkey"
+              }
+            ]
+          }
+        ]
+      }
+    },
     {
       "name": "beneficiary",
       "type": {
@@ -561,6 +793,28 @@ export type Deadmansswitch = {
           {
             "name": "shareBps",
             "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "beneficiaryAllocation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "address",
+            "type": "pubkey"
+          },
+          {
+            "name": "assets",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "assetAllocation"
+                }
+              }
+            }
           }
         ]
       }

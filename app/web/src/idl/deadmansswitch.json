@@ -57,6 +57,105 @@
       "args": []
     },
     {
+      "name": "distribute_asset",
+      "docs": [
+        "Distribute specific asset amount to beneficiary (enhanced version)"
+      ],
+      "discriminator": [
+        117,
+        26,
+        134,
+        108,
+        27,
+        159,
+        126,
+        102
+      ],
+      "accounts": [
+        {
+          "name": "switch",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  119,
+                  105,
+                  116,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "switch.owner",
+                "account": "Switch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "switch.owner",
+                "account": "Switch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow_token_account",
+          "writable": true
+        },
+        {
+          "name": "beneficiary",
+          "writable": true
+        },
+        {
+          "name": "beneficiary_token_account",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "asset_type",
+          "type": {
+            "defined": {
+              "name": "AssetType"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "distribute_sol",
       "docs": [
         "Distribute SOL from escrow to beneficiaries"
@@ -307,6 +406,94 @@
       ]
     },
     {
+      "name": "initialize_switch_with_assets",
+      "docs": [
+        "Initialize a switch with specific asset allocations (enhanced version)"
+      ],
+      "discriminator": [
+        227,
+        144,
+        50,
+        91,
+        115,
+        209,
+        126,
+        97
+      ],
+      "accounts": [
+        {
+          "name": "switch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  119,
+                  105,
+                  116,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "timeout_seconds",
+          "type": "i64"
+        },
+        {
+          "name": "allocations",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "BeneficiaryAllocation"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "send_heartbeat",
       "docs": [
         "Send a heartbeat to extend the deadline"
@@ -540,9 +727,54 @@
       "code": 6009,
       "name": "BeneficiaryNotFound",
       "msg": "Beneficiary not found"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidAssetAllocation",
+      "msg": "Invalid asset allocation - beneficiary must have at least one asset"
     }
   ],
   "types": [
+    {
+      "name": "AssetAllocation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_type",
+            "type": {
+              "defined": {
+                "name": "AssetType"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AssetType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Sol"
+          },
+          {
+            "name": "SplToken",
+            "fields": [
+              {
+                "name": "mint",
+                "type": "pubkey"
+              }
+            ]
+          }
+        ]
+      }
+    },
     {
       "name": "Beneficiary",
       "type": {
@@ -555,6 +787,28 @@
           {
             "name": "share_bps",
             "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BeneficiaryAllocation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "address",
+            "type": "pubkey"
+          },
+          {
+            "name": "assets",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "AssetAllocation"
+                }
+              }
+            }
           }
         ]
       }
