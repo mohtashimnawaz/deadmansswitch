@@ -32,7 +32,7 @@ export const Heartbeat: FC = () => {
         .rpc();
 
       console.log("Heartbeat sent:", tx);
-      alert("Heartbeat sent successfully! ❤️");
+      alert("Heartbeat sent successfully!");
     } catch (error: any) {
       console.error("Error sending heartbeat:", error);
       alert(`Error: ${error.message}`);
@@ -44,7 +44,9 @@ export const Heartbeat: FC = () => {
   return (
     <div className="card p-8">
       <div className="flex items-center gap-3 mb-4">
-        <div className="text-3xl animate-pulse">💓</div>
+        <div className="animated-icon">
+          <div className="heart-icon"></div>
+        </div>
         <h2 className="text-2xl font-bold text-gray-800">Send Heartbeat</h2>
       </div>
       <p className="text-gray-600 mb-6">
@@ -56,8 +58,10 @@ export const Heartbeat: FC = () => {
         disabled={loading || !publicKey}
         className="w-full py-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-xl text-lg flex items-center justify-center gap-2"
       >
-        <span className="text-2xl">❤️</span>
-        {loading ? "⏳ Sending..." : "I'm Alive!"}
+        <div className="w-8 h-8 flex items-center justify-center">
+          <div className="heart-icon" style={{width: '20px', height: '20px'}}></div>
+        </div>
+        {loading ? "Sending..." : "I'm Alive!"}
       </button>
     </div>
   );

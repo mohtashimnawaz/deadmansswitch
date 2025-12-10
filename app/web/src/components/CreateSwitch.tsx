@@ -101,14 +101,19 @@ export const CreateSwitch: FC = () => {
   return (
     <div className="card p-8">
       <div className="flex items-center gap-3 mb-6">
-        <div className="text-3xl">🛡️</div>
+        <div className="animated-icon">
+          <div className="shield-icon"></div>
+        </div>
         <h2 className="text-2xl font-bold text-gray-800">Create Switch</h2>
       </div>
 
       <div className="space-y-6">
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            ⏰ Timeout Duration
+            <div className="flex items-center gap-2">
+              <div className="clock-icon" style={{width: '14px', height: '14px', borderWidth: '2px'}}></div>
+              <span>Timeout Duration</span>
+            </div>
           </label>
           <input
             type="number"
@@ -117,8 +122,7 @@ export const CreateSwitch: FC = () => {
             className="input-field"
             placeholder="86400"
           />
-          <p className="text-sm text-gray-500 mt-2 flex items-center gap-1">
-            <span>📅</span>
+          <p className="text-sm text-gray-500 mt-2">
             {Math.floor(timeout / 3600)} hours ({Math.floor(timeout / 86400)} days)
           </p>
         </div>
@@ -126,7 +130,14 @@ export const CreateSwitch: FC = () => {
         <div>
           <div className="flex justify-between items-center mb-3">
             <label className="block text-sm font-semibold text-gray-700">
-              👥 Beneficiaries
+              <div className="flex items-center gap-2">
+                <div style={{display: 'flex', gap: '2px'}}>
+                  <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
+                  <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
+                  <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
+                </div>
+                <span>Beneficiaries</span>
+              </div>
             </label>
             <button
               onClick={addBeneficiary}
@@ -177,7 +188,7 @@ export const CreateSwitch: FC = () => {
             <p className={`text-sm font-medium ${
                 totalShare === 100 ? "text-green-700" : "text-amber-700"
               }`}>
-              {totalShare === 100 ? "✓" : "⚠️"} Total: {totalShare}% {totalShare === 100 ? "" : "(must equal 100%)"}
+              Total: {totalShare}% {totalShare === 100 ? "" : "(must equal 100%)"}
             </p>
           </div>
         </div>
@@ -187,7 +198,7 @@ export const CreateSwitch: FC = () => {
           disabled={loading || !publicKey || totalShare !== 100}
           className="btn-primary w-full py-4 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
         >
-          {loading ? "⏳ Creating..." : "🚀 Create Switch"}
+          {loading ? "Creating..." : "Create Switch"}
         </button>
       </div>
     </div>

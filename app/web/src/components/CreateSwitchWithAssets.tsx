@@ -228,11 +228,12 @@ export const CreateSwitchWithAssets: FC = () => {
     return (
       <div className="card p-8">
         <div className="flex items-center gap-3 mb-4">
-          <div className="text-3xl">🛡️</div>
+          <div className="animated-icon">
+            <div className="shield-icon"></div>
+          </div>
           <h2 className="text-2xl font-bold text-gray-800">Create Switch</h2>
         </div>
         <div className="text-center py-8">
-          <div className="text-6xl mb-4">🔗</div>
           <p className="text-gray-600">Connect your wallet to view assets and create a switch</p>
         </div>
       </div>
@@ -242,14 +243,19 @@ export const CreateSwitchWithAssets: FC = () => {
   return (
     <div className="card p-8">
       <div className="flex items-center gap-3 mb-6">
-        <div className="text-3xl">🛡️</div>
+        <div className="animated-icon">
+          <div className="shield-icon"></div>
+        </div>
         <h2 className="text-2xl font-bold text-gray-800">Create Switch with Assets</h2>
       </div>
 
       {/* Timeout */}
       <div className="mb-6">
         <label className="block text-sm font-semibold text-gray-700 mb-2">
-          ⏰ Timeout Duration
+          <div className="flex items-center gap-2">
+            <div className="clock-icon" style={{width: '14px', height: '14px', borderWidth: '2px'}}></div>
+            <span>Timeout Duration</span>
+          </div>
         </label>
         <input
           type="number"
@@ -258,8 +264,7 @@ export const CreateSwitchWithAssets: FC = () => {
           className="input-field"
           placeholder="86400"
         />
-        <p className="text-sm text-gray-500 mt-2 flex items-center gap-1">
-          <span>📅</span>
+        <p className="text-sm text-gray-500 mt-2">
           {Math.floor(timeout / 3600)} hours ({Math.floor(timeout / 86400)} days)
         </p>
       </div>
@@ -267,20 +272,20 @@ export const CreateSwitchWithAssets: FC = () => {
       {/* Wallet Assets */}
       <div className="mb-6 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-lg font-semibold text-gray-800">💰 Your Assets</h3>
+          <h3 className="text-lg font-semibold text-gray-800">Your Assets</h3>
           <button
             onClick={loadWalletAssets}
             disabled={loadingAssets}
             className="text-sm font-medium text-purple-600 hover:text-purple-700 px-3 py-1 rounded-lg hover:bg-purple-100 transition-all"
           >
-            {loadingAssets ? "⏳ Loading..." : "🔄 Refresh"}
+            {loadingAssets ? "Loading..." : "Refresh"}
           </button>
         </div>
 
         <div className="space-y-2">
           <div className="bg-white rounded-lg p-3 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <span className="text-xl">◎</span>
+              <div style={{width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, #14F195, #9945FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: 'white'}}>S</div>
               <span className="font-medium text-gray-700">SOL</span>
             </div>
             <div className="text-right">
@@ -297,7 +302,7 @@ export const CreateSwitchWithAssets: FC = () => {
               className="bg-white rounded-lg p-3 flex justify-between items-center"
             >
               <div className="flex items-center gap-2">
-                <span className="text-xl">🪙</span>
+                <div style={{width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, #f59e0b, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: 'white'}}>T</div>
                 <div>
                   <div className="font-medium text-gray-700">{token.symbol}</div>
                   <div className="text-xs text-gray-500 font-mono">
@@ -320,7 +325,14 @@ export const CreateSwitchWithAssets: FC = () => {
       <div className="mb-6">
         <div className="flex justify-between items-center mb-3">
           <label className="block text-sm font-semibold text-gray-700">
-            👥 Beneficiaries & Asset Allocations
+            <div className="flex items-center gap-2">
+              <div style={{display: 'flex', gap: '2px'}}>
+                <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
+                <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
+                <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
+              </div>
+              <span>Beneficiaries & Asset Allocations</span>
+            </div>
           </label>
           <button
             onClick={addBeneficiary}
@@ -367,9 +379,9 @@ export const CreateSwitchWithAssets: FC = () => {
                     key={assetIndex}
                     className="flex gap-2 items-center bg-white p-2 rounded-lg"
                   >
-                    <span className="text-lg">
-                      {asset.type === "SOL" ? "◎" : "🪙"}
-                    </span>
+                    <div style={{width: '20px', height: '20px', borderRadius: '50%', background: asset.type === 'SOL' ? 'linear-gradient(135deg, #14F195, #9945FF)' : 'linear-gradient(135deg, #f59e0b, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', color: 'white'}}>
+                      {asset.type === "SOL" ? "S" : "T"}
+                    </div>
                     <span className="text-sm font-medium text-gray-700 min-w-[80px]">
                       {asset.type === "SOL" ? "SOL" : asset.symbol}
                     </span>
@@ -428,7 +440,7 @@ export const CreateSwitchWithAssets: FC = () => {
         disabled={loading || allocations.length === 0}
         className="btn-primary w-full py-4 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
       >
-        {loading ? "⏳ Creating..." : "🚀 Create Switch with Assets"}
+        {loading ? "Creating..." : "Create Switch with Assets"}
       </button>
     </div>
   );

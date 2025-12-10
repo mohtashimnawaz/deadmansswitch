@@ -65,9 +65,9 @@ export const MySwitches: FC = () => {
   };
 
   const getStatusText = (status: any): string => {
-    if (status.active) return "✅ Active";
-    if (status.expired) return "⚠️ Expired";
-    if (status.canceled) return "❌ Canceled";
+    if (status.active) return "Active";
+    if (status.expired) return "Expired";
+    if (status.canceled) return "Canceled";
     return "Unknown";
   };
 
@@ -75,11 +75,17 @@ export const MySwitches: FC = () => {
     return (
       <div className="card p-8">
         <div className="flex items-center gap-3 mb-4">
-          <div className="text-3xl">📊</div>
+          <div className="animated-icon">
+            <div className="chart-icon">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
           <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
         </div>
         <div className="text-center py-8">
-          <div className="text-6xl mb-4">🔒</div>
           <p className="text-gray-600">Connect your wallet to view your switches</p>
         </div>
       </div>
@@ -90,11 +96,18 @@ export const MySwitches: FC = () => {
     return (
       <div className="card p-8">
         <div className="flex items-center gap-3 mb-4">
-          <div className="text-3xl">📊</div>
+          <div className="animated-icon">
+            <div className="chart-icon">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
           <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
         </div>
         <div className="text-center py-8">
-          <div className="text-4xl mb-4 animate-spin">⏳</div>
+          <div className="w-12 h-12 mx-auto mb-4 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -105,11 +118,17 @@ export const MySwitches: FC = () => {
     return (
       <div className="card p-8">
         <div className="flex items-center gap-3 mb-4">
-          <div className="text-3xl">📊</div>
+          <div className="animated-icon">
+            <div className="chart-icon">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
           <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
         </div>
         <div className="text-center py-8">
-          <div className="text-6xl mb-4">🆕</div>
           <p className="text-gray-600">No switches found. Create one to get started!</p>
         </div>
       </div>
@@ -119,7 +138,14 @@ export const MySwitches: FC = () => {
   return (
     <div className="card p-8">
       <div className="flex items-center gap-3 mb-6">
-        <div className="text-3xl">📊</div>
+        <div className="animated-icon">
+          <div className="chart-icon">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
         <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
       </div>
 
@@ -127,7 +153,7 @@ export const MySwitches: FC = () => {
         <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-1">🛡️ Your Switch</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-1">Your Switch</h3>
               <p className={`text-sm font-medium ${getStatusColor(switchData.status)}`}>
                 {getStatusText(switchData.status)}
               </p>
@@ -136,14 +162,14 @@ export const MySwitches: FC = () => {
               onClick={loadSwitch}
               className="text-sm font-medium text-purple-600 hover:text-purple-700 px-3 py-1 rounded-lg hover:bg-purple-100 transition-all"
             >
-              🔄 Refresh
+              Refresh
             </button>
           </div>
 
           <div className="space-y-3">
             <div className="bg-white/60 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-lg">⏰</span>
+                <div className="clock-icon" style={{width: '16px', height: '16px', borderWidth: '2px'}}></div>
                 <span className="text-sm font-medium text-gray-600">Timeout Period</span>
               </div>
               <span className="text-lg font-bold text-gray-800">
@@ -156,7 +182,9 @@ export const MySwitches: FC = () => {
 
             <div className="bg-white/60 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-lg">⌛</span>
+                <div style={{width: '16px', height: '16px', border: '2px solid #6366f1', borderRadius: '4px', position: 'relative'}}>
+                  <div style={{width: '100%', height: '50%', background: 'linear-gradient(to bottom, #6366f1 0%, transparent 100%)', position: 'absolute', top: 0}}></div>
+                </div>
                 <span className="text-sm font-medium text-gray-600">Time Remaining</span>
               </div>
               <span className="text-lg font-bold text-gray-800">
@@ -166,7 +194,11 @@ export const MySwitches: FC = () => {
 
             <div className="bg-white/60 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">👥</span>
+                <div style={{display: 'flex', gap: '2px'}}>
+                  <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
+                  <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
+                  <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
+                </div>
                 <span className="text-sm font-medium text-gray-600">Beneficiaries</span>
               </div>
               <div className="space-y-2">

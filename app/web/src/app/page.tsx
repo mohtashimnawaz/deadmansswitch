@@ -23,7 +23,9 @@ export default function Home() {
         <div className="px-8">
           <div className="flex justify-between items-center h-24">
             <div className="flex items-center gap-4" style={{animation: 'wave 5s ease-in-out infinite'}}>
-              <div className="text-5xl" style={{animation: 'smoothFloat 4s ease-in-out infinite'}}>⏱️</div>
+              <div className="animated-icon" style={{animation: 'smoothFloat 4s ease-in-out infinite'}}>
+                <div className="clock-icon"></div>
+              </div>
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 bg-clip-text text-transparent" style={{backgroundSize: '200% auto', animation: 'fluidFlow 3s ease infinite'}}>
                   Dead Man's Switch
