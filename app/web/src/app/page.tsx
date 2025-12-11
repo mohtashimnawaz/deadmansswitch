@@ -1,9 +1,14 @@
 "use client";
 
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import dynamic from "next/dynamic";
 import { CreateSwitchWithAssets } from "@/components/CreateSwitchWithAssets";
 import { MySwitches } from "@/components/MySwitches";
 import { Heartbeat } from "@/components/Heartbeat";
+
+const WalletMultiButton = dynamic(
+  () => import("@solana/wallet-adapter-react-ui").then(mod => ({ default: mod.WalletMultiButton })),
+  { ssr: false }
+);
 
 export default function Home() {
   return (
