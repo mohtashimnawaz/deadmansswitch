@@ -8,11 +8,14 @@ skip-lint = false
 [programs.localnet]
 deadmansswitch = "BUE3LbNV3jkqGwE1E1ouvka3pcHuDvpLw4u9WT8oexxr"
 
+[programs.devnet]
+deadmansswitch = "BUE3LbNV3jkqGwE1E1ouvka3pcHuDvpLw4u9WT8oexxr"
+
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

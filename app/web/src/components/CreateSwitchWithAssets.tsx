@@ -368,8 +368,8 @@ export const CreateSwitchWithAssets: FC = () => {
                 onChange={(e) =>
                   updateBeneficiaryAddress(allocIndex, e.target.value)
                 }
-                className="input-field mb-3"
-                placeholder="Beneficiary wallet address"
+                className={`input-field mb-3 ${!alloc.beneficiary ? 'border-amber-400 focus:ring-amber-400' : ''}`}
+                placeholder="Beneficiary wallet address (required)"
               />
 
               {/* Assets for this beneficiary */}
