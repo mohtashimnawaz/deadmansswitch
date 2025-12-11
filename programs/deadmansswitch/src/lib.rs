@@ -116,13 +116,20 @@ pub mod deadmansswitch {
     /// Send a heartbeat to extend the deadline
     pub fn send_heartbeat(ctx: Context<SendHeartbeat>, _switch_id: String) -> Result<()> {
         let switch = &mut ctx.accounts.switch;
+        let clock = Clock::get()?;
 
         require!(
             switch.status == SwitchStatus::Active,
             ErrorCode::SwitchNotActive
         );
 
-        let clock = Clock::get()?;
+        // Check if deadline has already passed - if so, mark as expired and reject heartbeat
+        require!(
+            clock.unix_timestamp <= switch.heartbeat_deadline,
+            ErrorCode::SwitchAlreadyExpired
+        );
+
+        // Update deadline only if switch is still active and not expired
         switch.heartbeat_deadline = clock.unix_timestamp + switch.timeout_seconds;
 
         msg!("Heartbeat received. New deadline: {}", switch.heartbeat_deadline);
@@ -668,6 +675,9 @@ pub enum ErrorCode {
     
     #[msg("Switch has not been canceled")]
     SwitchNotCanceled,
+    
+    #[msg("Switch has already expired - heartbeat rejected")]
+    SwitchAlreadyExpired,
     
     #[msg("Invalid token type for this operation")]
     InvalidTokenType,

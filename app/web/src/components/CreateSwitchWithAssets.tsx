@@ -30,6 +30,7 @@ export const CreateSwitchWithAssets: FC = () => {
   const { connection } = useConnection();
   const program = useProgram();
 
+  const [switchName, setSwitchName] = useState<string>("");
   const [timeout, setTimeout] = useState<number>(86400);
   const [loading, setLoading] = useState(false);
   const [loadingAssets, setLoadingAssets] = useState(false);
@@ -149,6 +150,12 @@ export const CreateSwitchWithAssets: FC = () => {
       return;
     }
 
+    // Validate switch name
+    if (!switchName || switchName.length === 0 || switchName.length > 32) {
+      alert("Switch name must be 1-32 characters");
+      return;
+    }
+
     // Validate allocations
     for (const alloc of allocations) {
       if (!alloc.beneficiary) {
@@ -203,6 +210,7 @@ export const CreateSwitchWithAssets: FC = () => {
       // Use the basic initialize_switch instruction
       const tx = await program.methods
         .initializeSwitch(
+          switchName,
           new BN(timeout),
           beneficiaries,
           { sol: {} } // TokenType::Sol
@@ -213,6 +221,7 @@ export const CreateSwitchWithAssets: FC = () => {
       alert("Switch created successfully!");
 
       // Reset form
+      setSwitchName("");
       setAllocations([{ beneficiary: "", assets: [] }]);
       await loadWalletAssets(); // Refresh balances
     } catch (error: any) {
@@ -247,6 +256,27 @@ export const CreateSwitchWithAssets: FC = () => {
           <div className="shield-icon"></div>
         </div>
         <h2 className="text-2xl font-bold text-gray-800">Create Switch with Assets</h2>
+      </div>
+
+      {/* Switch Name */}
+      <div className="mb-6">
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <div className="flex items-center gap-2">
+            <div className="shield-icon" style={{width: '14px', height: '14px', borderWidth: '2px'}}></div>
+            <span>Switch Name</span>
+          </div>
+        </label>
+        <input
+          type="text"
+          value={switchName}
+          onChange={(e) => setSwitchName(e.target.value)}
+          className="input-field"
+          placeholder="My Emergency Switch"
+          maxLength={32}
+        />
+        <p className="text-sm text-gray-500 mt-2">
+          Unique name for this switch (1-32 characters). You can create multiple switches with different names.
+        </p>
       </div>
 
       {/* Timeout */}

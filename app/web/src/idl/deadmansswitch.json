@@ -815,21 +815,26 @@
     },
     {
       "code": 6008,
+      "name": "SwitchAlreadyExpired",
+      "msg": "Switch has already expired - heartbeat rejected"
+    },
+    {
+      "code": 6009,
       "name": "InvalidTokenType",
       "msg": "Invalid token type for this operation"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "InsufficientFunds",
       "msg": "Insufficient funds in escrow"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "BeneficiaryNotFound",
       "msg": "Beneficiary not found"
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "InvalidAssetAllocation",
       "msg": "Invalid asset allocation - beneficiary must have at least one asset"
     }

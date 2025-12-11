@@ -48,19 +48,29 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switchId"
               }
             ]
           }
         },
         {
           "name": "owner",
+          "writable": true,
           "signer": true,
           "relations": [
             "switch"
           ]
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "switchId",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "distributeAsset",
@@ -97,6 +107,11 @@ export type Deadmansswitch = {
                 "kind": "account",
                 "path": "switch.owner",
                 "account": "switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
+                "account": "switch"
               }
             ]
           }
@@ -120,6 +135,11 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "switch.owner",
+                "account": "switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
                 "account": "switch"
               }
             ]
@@ -196,6 +216,11 @@ export type Deadmansswitch = {
                 "kind": "account",
                 "path": "switch.owner",
                 "account": "switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
+                "account": "switch"
               }
             ]
           }
@@ -219,6 +244,11 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "switch.owner",
+                "account": "switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
                 "account": "switch"
               }
             ]
@@ -270,6 +300,11 @@ export type Deadmansswitch = {
                 "kind": "account",
                 "path": "switch.owner",
                 "account": "switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
+                "account": "switch"
               }
             ]
           }
@@ -292,6 +327,11 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "switch.owner",
+                "account": "switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
                 "account": "switch"
               }
             ]
@@ -318,7 +358,7 @@ export type Deadmansswitch = {
     {
       "name": "initializeSwitch",
       "docs": [
-        "Initialize a new Dead Man's Switch"
+        "Initialize a new Dead Man's Switch with a unique ID"
       ],
       "discriminator": [
         107,
@@ -350,6 +390,10 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switchId"
               }
             ]
           }
@@ -372,6 +416,10 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switchId"
               }
             ]
           }
@@ -387,6 +435,10 @@ export type Deadmansswitch = {
         }
       ],
       "args": [
+        {
+          "name": "switchId",
+          "type": "string"
+        },
         {
           "name": "timeoutSeconds",
           "type": "i64"
@@ -446,6 +498,10 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switchId"
               }
             ]
           }
@@ -468,6 +524,10 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switchId"
               }
             ]
           }
@@ -483,6 +543,10 @@ export type Deadmansswitch = {
         }
       ],
       "args": [
+        {
+          "name": "switchId",
+          "type": "string"
+        },
         {
           "name": "timeoutSeconds",
           "type": "i64"
@@ -534,6 +598,10 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switchId"
               }
             ]
           }
@@ -546,7 +614,12 @@ export type Deadmansswitch = {
           ]
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "switchId",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "triggerExpiry",
@@ -584,12 +657,21 @@ export type Deadmansswitch = {
                 "kind": "account",
                 "path": "switch.owner",
                 "account": "switch"
+              },
+              {
+                "kind": "arg",
+                "path": "switchId"
               }
             ]
           }
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "switchId",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "withdrawSol",
@@ -625,6 +707,10 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switchId"
               }
             ]
           }
@@ -648,6 +734,10 @@ export type Deadmansswitch = {
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switchId"
               }
             ]
           }
@@ -665,7 +755,12 @@ export type Deadmansswitch = {
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "switchId",
+          "type": "string"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -686,56 +781,66 @@ export type Deadmansswitch = {
   "errors": [
     {
       "code": 6000,
+      "name": "invalidSwitchId",
+      "msg": "Invalid switch ID (1-32 characters allowed)"
+    },
+    {
+      "code": 6001,
       "name": "invalidBeneficiaryCount",
       "msg": "Invalid number of beneficiaries (1-10 allowed)"
     },
     {
-      "code": 6001,
+      "code": 6002,
       "name": "invalidShareDistribution",
       "msg": "Beneficiary shares must sum to 10000 basis points (100%)"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "invalidTimeout",
       "msg": "Timeout must be positive"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "switchNotActive",
       "msg": "Switch is not active"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "deadlineNotPassed",
       "msg": "Deadline has not passed yet"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "switchNotExpired",
       "msg": "Switch has not expired"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "switchNotCanceled",
       "msg": "Switch has not been canceled"
     },
     {
-      "code": 6007,
+      "code": 6008,
+      "name": "switchAlreadyExpired",
+      "msg": "Switch has already expired - heartbeat rejected"
+    },
+    {
+      "code": 6009,
       "name": "invalidTokenType",
       "msg": "Invalid token type for this operation"
     },
     {
-      "code": 6008,
+      "code": 6010,
       "name": "insufficientFunds",
       "msg": "Insufficient funds in escrow"
     },
     {
-      "code": 6009,
+      "code": 6011,
       "name": "beneficiaryNotFound",
       "msg": "Beneficiary not found"
     },
     {
-      "code": 6010,
+      "code": 6012,
       "name": "invalidAssetAllocation",
       "msg": "Invalid asset allocation - beneficiary must have at least one asset"
     }
@@ -827,6 +932,10 @@ export type Deadmansswitch = {
           {
             "name": "owner",
             "type": "pubkey"
+          },
+          {
+            "name": "switchId",
+            "type": "string"
           },
           {
             "name": "beneficiaries",

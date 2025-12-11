@@ -96,6 +96,7 @@ export class DeadManSwitchRelayer {
       for (const switchAccount of switches) {
         const switchData = switchAccount.account;
         const switchPubkey = switchAccount.publicKey;
+        const switchId = switchData.switchId;
 
         // Only process active switches
         if (!this.isActive(switchData.status)) {
@@ -108,22 +109,22 @@ export class DeadManSwitchRelayer {
         const deadline = switchData.heartbeatDeadline.toNumber();
         if (currentTime > deadline) {
           logger.info(
-            `Switch ${switchPubkey.toString()} expired. Deadline: ${deadline}, Current: ${currentTime}`
+            `Switch ${switchPubkey.toString()} (${switchId}) expired. Deadline: ${deadline}, Current: ${currentTime}`
           );
           expiredCount++;
 
           // Trigger expiry
-          const success = await this.triggerExpiry(switchPubkey);
+          const success = await this.triggerExpiry(switchPubkey, switchId);
           if (success) {
             triggeredCount++;
             
             // Distribute funds to all beneficiaries
-            await this.distributeFunds(switchPubkey, switchData);
+            await this.distributeFunds(switchPubkey, switchData, switchId);
           }
         } else {
           const timeRemaining = deadline - currentTime;
           logger.debug(
-            `Switch ${switchPubkey.toString()} active. Time remaining: ${timeRemaining}s`
+            `Switch ${switchPubkey.toString()} (${switchId}) active. Time remaining: ${timeRemaining}s`
           );
         }
       }
@@ -139,15 +140,15 @@ export class DeadManSwitchRelayer {
   /**
    * Trigger expiry for a switch
    */
-  private async triggerExpiry(switchPubkey: PublicKey): Promise<boolean> {
+  private async triggerExpiry(switchPubkey: PublicKey, switchId: string): Promise<boolean> {
     let retries = 0;
 
     while (retries < this.config.maxRetries) {
       try {
-        logger.info(`Triggering expiry for switch: ${switchPubkey.toString()}`);
+        logger.info(`Triggering expiry for switch: ${switchPubkey.toString()} (${switchId})`);
 
         const tx = await this.program.methods
-          .triggerExpiry()
+          .triggerExpiry(switchId)
           .accounts({
             switch: switchPubkey,
           })
@@ -174,18 +175,18 @@ export class DeadManSwitchRelayer {
   /**
    * Distribute funds to all beneficiaries
    */
-  private async distributeFunds(switchPubkey: PublicKey, switchData: any): Promise<void> {
+  private async distributeFunds(switchPubkey: PublicKey, switchData: any, switchId: string): Promise<void> {
     const tokenType = switchData.tokenType;
     const beneficiaries = switchData.beneficiaries;
 
-    logger.info(`Distributing funds to ${beneficiaries.length} beneficiaries`);
+    logger.info(`Distributing funds to ${beneficiaries.length} beneficiaries for switch ${switchId}`);
 
     for (const beneficiary of beneficiaries) {
       try {
         if (this.isSolTokenType(tokenType)) {
-          await this.distributeSol(switchPubkey, switchData, beneficiary.address);
+          await this.distributeSol(switchPubkey, switchData, beneficiary.address, switchId);
         } else {
-          await this.distributeSpl(switchPubkey, switchData, beneficiary.address);
+          await this.distributeSpl(switchPubkey, switchData, beneficiary.address, switchId);
         }
       } catch (error: any) {
         logger.error(
@@ -202,10 +203,11 @@ export class DeadManSwitchRelayer {
   private async distributeSol(
     switchPubkey: PublicKey,
     switchData: any,
-    beneficiaryPubkey: PublicKey
+    beneficiaryPubkey: PublicKey,
+    switchId: string
   ): Promise<void> {
     const [escrow] = PublicKey.findProgramAddressSync(
-      [Buffer.from("escrow"), switchData.owner.toBuffer()],
+      [Buffer.from("escrow"), switchData.owner.toBuffer(), Buffer.from(switchId)],
       this.program.programId
     );
 
@@ -237,7 +239,8 @@ export class DeadManSwitchRelayer {
   private async distributeSpl(
     switchPubkey: PublicKey,
     switchData: any,
-    beneficiaryPubkey: PublicKey
+    beneficiaryPubkey: PublicKey,
+    switchId: string
   ): Promise<void> {
     // This would require additional token account lookups
     // Implementation depends on your token account structure

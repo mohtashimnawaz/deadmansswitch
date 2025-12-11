@@ -3,6 +3,7 @@
 import { FC, useState } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { BN } from "@coral-xyz/anchor";
 import { useProgram } from "@/hooks/useProgram";
 
 export const CreateSwitch: FC = () => {
@@ -10,6 +11,7 @@ export const CreateSwitch: FC = () => {
   const { connection } = useConnection();
   const program = useProgram();
 
+  const [switchName, setSwitchName] = useState<string>("");
   const [timeout, setTimeout] = useState<number>(86400); // 24 hours default
   const [beneficiaries, setBeneficiaries] = useState<
     Array<{ address: string; share: number }>
@@ -40,6 +42,12 @@ export const CreateSwitch: FC = () => {
       return;
     }
 
+    // Validate switch name
+    if (!switchName || switchName.length === 0 || switchName.length > 32) {
+      alert("Switch name must be 1-32 characters");
+      return;
+    }
+
     // Validate beneficiaries
     const totalShare = beneficiaries.reduce((sum, b) => sum + b.share, 0);
     if (totalShare !== 100) {
@@ -58,16 +66,6 @@ export const CreateSwitch: FC = () => {
 
     setLoading(true);
     try {
-      const [switchPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("switch"), publicKey.toBuffer()],
-        program.programId
-      );
-
-      const [escrowPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("escrow"), publicKey.toBuffer()],
-        program.programId
-      );
-
       const beneficiaryList = beneficiaries.map((b) => ({
         address: new PublicKey(b.address),
         shareBps: b.share * 100, // Convert percentage to basis points
@@ -75,19 +73,16 @@ export const CreateSwitch: FC = () => {
 
       const tx = await program.methods
         .initializeSwitch(
-          timeout,
+          switchName,
+          new BN(timeout),
           beneficiaryList,
           { sol: {} } // TokenType::Sol
         )
-        .accounts({
-          switch: switchPda,
-          escrow: escrowPda,
-          owner: publicKey,
-        })
         .rpc();
 
       console.log("Switch created:", tx);
       alert("Switch created successfully!");
+      setSwitchName("");
     } catch (error: any) {
       console.error("Error creating switch:", error);
       alert(`Error: ${error.message}`);
@@ -108,6 +103,26 @@ export const CreateSwitch: FC = () => {
       </div>
 
       <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <div className="flex items-center gap-2">
+              <div className="shield-icon" style={{width: '14px', height: '14px', borderWidth: '2px'}}></div>
+              <span>Switch Name</span>
+            </div>
+          </label>
+          <input
+            type="text"
+            value={switchName}
+            onChange={(e) => setSwitchName(e.target.value)}
+            className="input-field"
+            placeholder="My Emergency Switch"
+            maxLength={32}
+          />
+          <p className="text-sm text-gray-500 mt-2">
+            Unique name for this switch (1-32 characters)
+          </p>
+        </div>
+
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             <div className="flex items-center gap-2">

@@ -1,72 +1,121 @@
 "use client";
 
 import { FC, useEffect, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { useProgram } from "@/hooks/useProgram";
 
 interface SwitchData {
+  publicKey: PublicKey;
+  switchId: string;
   owner: PublicKey;
   heartbeatDeadline: number;
   timeoutSeconds: number;
-  status: string;
+  status: any;
   beneficiaries: Array<{ address: PublicKey; shareBps: number }>;
 }
 
 export const MySwitches: FC = () => {
   const { publicKey } = useWallet();
+  const { connection } = useConnection();
   const program = useProgram();
-  const [switchData, setSwitchData] = useState<SwitchData | null>(null);
+  const [switches, setSwitches] = useState<SwitchData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [canceling, setCanceling] = useState(false);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [sendingHeartbeatId, setSendingHeartbeatId] = useState<string | null>(null);
 
   useEffect(() => {
     if (publicKey && program) {
-      loadSwitch();
+      loadSwitches();
     }
   }, [publicKey, program]);
 
-  const loadSwitch = async () => {
+  const loadSwitches = async () => {
     if (!publicKey || !program) return;
 
     setLoading(true);
     try {
-      const [switchPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("switch"), publicKey.toBuffer()],
-        program.programId
-      );
+      // Use getProgramAccounts to fetch all switches for this owner
+      const allAccounts = await connection.getProgramAccounts(program.programId, {
+        filters: [
+          // Anchor account discriminator for Switch (8 bytes) + owner pubkey offset
+          {
+            memcmp: {
+              offset: 8, // After discriminator
+              bytes: publicKey.toBase58(),
+            },
+          },
+        ],
+      });
 
-      const data = await program.account.switch.fetch(switchPda);
-      setSwitchData(data as any);
+      const switchDataList: SwitchData[] = [];
+      for (const account of allAccounts) {
+        try {
+          const decoded = program.coder.accounts.decode("switch", account.account.data);
+          switchDataList.push({
+            publicKey: account.pubkey,
+            switchId: decoded.switchId,
+            owner: decoded.owner,
+            heartbeatDeadline: decoded.heartbeatDeadline.toNumber(),
+            timeoutSeconds: decoded.timeoutSeconds.toNumber(),
+            status: decoded.status,
+            beneficiaries: decoded.beneficiaries,
+          });
+        } catch (e) {
+          console.log("Failed to decode account:", e);
+        }
+      }
+
+      setSwitches(switchDataList);
     } catch (error: any) {
-      console.log("No switch found or error:", error.message);
-      setSwitchData(null);
+      console.error("Error loading switches:", error);
+      setSwitches([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const cancelSwitch = async () => {
+  const cancelSwitch = async (switchId: string) => {
     if (!publicKey || !program) return;
     
-    if (!confirm("Are you sure you want to cancel your switch? This cannot be undone.")) {
+    if (!confirm(`Are you sure you want to cancel switch "${switchId}"? This will close the account.`)) {
       return;
     }
 
-    setCanceling(true);
+    setCancelingId(switchId);
     try {
       const tx = await program.methods
-        .cancelSwitch()
+        .cancelSwitch(switchId)
         .rpc();
 
       console.log("Switch canceled:", tx);
       alert("Switch canceled successfully!");
-      setSwitchData(null);
+      await loadSwitches();
     } catch (error: any) {
       console.error("Error canceling switch:", error);
       alert(`Error: ${error.message}`);
     } finally {
-      setCanceling(false);
+      setCancelingId(null);
+    }
+  };
+
+  const sendHeartbeat = async (switchId: string) => {
+    if (!publicKey || !program) return;
+
+    setSendingHeartbeatId(switchId);
+    try {
+      const tx = await program.methods
+        .sendHeartbeat(switchId)
+        .rpc();
+
+      console.log("Heartbeat sent:", tx);
+      alert("Heartbeat sent successfully!");
+      await loadSwitches();
+    } catch (error: any) {
+      console.error("Error sending heartbeat:", error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setSendingHeartbeatId(null);
     }
   };
 
@@ -76,9 +125,11 @@ export const MySwitches: FC = () => {
 
     if (remaining <= 0) return "EXPIRED";
 
-    const hours = Math.floor(remaining / 3600);
+    const days = Math.floor(remaining / 86400);
+    const hours = Math.floor((remaining % 86400) / 3600);
     const minutes = Math.floor((remaining % 3600) / 60);
 
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
     return `${hours}h ${minutes}m`;
   };
 
@@ -139,7 +190,7 @@ export const MySwitches: FC = () => {
     );
   }
 
-  if (!switchData) {
+  if (switches.length === 0) {
     return (
       <div className="card p-8">
         <div className="flex items-center gap-3 mb-4">
@@ -162,78 +213,100 @@ export const MySwitches: FC = () => {
 
   return (
     <div className="card p-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="animated-icon">
-          <div className="chart-icon">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="animated-icon">
+            <div className="chart-icon">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
           </div>
+          <h2 className="text-2xl font-bold text-gray-800">My Switches ({switches.length})</h2>
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
+        <button
+          onClick={loadSwitches}
+          className="text-sm font-medium text-purple-600 hover:text-purple-700 px-3 py-1 rounded-lg hover:bg-purple-100 transition-all"
+        >
+          Refresh All
+        </button>
       </div>
 
       <div className="space-y-4">
-        <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-1">Your Switch</h3>
-              <p className={`text-sm font-medium ${getStatusColor(switchData.status)}`}>
-                {getStatusText(switchData.status)}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={loadSwitch}
-                className="text-sm font-medium text-purple-600 hover:text-purple-700 px-3 py-1 rounded-lg hover:bg-purple-100 transition-all"
-              >
-                Refresh
-              </button>
-              <button
-                onClick={cancelSwitch}
-                disabled={canceling}
-                className="text-sm font-medium text-red-600 hover:text-red-700 px-3 py-1 rounded-lg hover:bg-red-100 transition-all disabled:opacity-50"
-              >
-                {canceling ? "Canceling..." : "Cancel Switch"}
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="bg-white/60 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="clock-icon" style={{width: '16px', height: '16px', borderWidth: '2px'}}></div>
-                <span className="text-sm font-medium text-gray-600">Timeout Period</span>
+        {switches.map((switchData) => (
+          <div 
+            key={switchData.switchId} 
+            className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-1">{switchData.switchId}</h3>
+                <p className={`text-sm font-medium ${getStatusColor(switchData.status)}`}>
+                  {getStatusText(switchData.status)}
+                </p>
               </div>
-              <span className="text-lg font-bold text-gray-800">
-                {Math.floor(switchData.timeoutSeconds / 3600)} hours
-              </span>
-              <span className="text-sm text-gray-600 ml-2">
-                ({Math.floor(switchData.timeoutSeconds / 86400)} days)
-              </span>
+              <div className="flex gap-2">
+                {switchData.status.active && (
+                  <button
+                    onClick={() => sendHeartbeat(switchData.switchId)}
+                    disabled={sendingHeartbeatId === switchData.switchId}
+                    className="text-sm font-medium text-green-600 hover:text-green-700 px-3 py-1 rounded-lg hover:bg-green-100 transition-all disabled:opacity-50"
+                  >
+                    {sendingHeartbeatId === switchData.switchId ? "Sending..." : "Send Heartbeat"}
+                  </button>
+                )}
+                {switchData.status.active && (
+                  <button
+                    onClick={() => cancelSwitch(switchData.switchId)}
+                    disabled={cancelingId === switchData.switchId}
+                    className="text-sm font-medium text-red-600 hover:text-red-700 px-3 py-1 rounded-lg hover:bg-red-100 transition-all disabled:opacity-50"
+                  >
+                    {cancelingId === switchData.switchId ? "Canceling..." : "Cancel"}
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="bg-white/60 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <div style={{width: '16px', height: '16px', border: '2px solid #6366f1', borderRadius: '4px', position: 'relative'}}>
-                  <div style={{width: '100%', height: '50%', background: 'linear-gradient(to bottom, #6366f1 0%, transparent 100%)', position: 'absolute', top: 0}}></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="bg-white/60 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="clock-icon" style={{width: '16px', height: '16px', borderWidth: '2px'}}></div>
+                  <span className="text-sm font-medium text-gray-600">Timeout Period</span>
                 </div>
-                <span className="text-sm font-medium text-gray-600">Time Remaining</span>
+                <span className="text-lg font-bold text-gray-800">
+                  {Math.floor(switchData.timeoutSeconds / 3600)} hours
+                </span>
+                <span className="text-sm text-gray-600 ml-2">
+                  ({Math.floor(switchData.timeoutSeconds / 86400)} days)
+                </span>
               </div>
-              <span className="text-lg font-bold text-gray-800">
-                {getTimeRemaining(switchData.heartbeatDeadline)}
-              </span>
+
+              <div className="bg-white/60 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="heart-icon" style={{width: '16px', height: '16px', borderWidth: '2px'}}></div>
+                  <span className="text-sm font-medium text-gray-600">Time Remaining</span>
+                </div>
+                <span className={`text-lg font-bold ${
+                  getTimeRemaining(switchData.heartbeatDeadline) === "EXPIRED" 
+                    ? "text-red-600" 
+                    : "text-gray-800"
+                }`}>
+                  {getTimeRemaining(switchData.heartbeatDeadline)}
+                </span>
+              </div>
             </div>
 
-            <div className="bg-white/60 rounded-lg p-3">
+            <div className="mt-3 bg-white/60 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
                 <div style={{display: 'flex', gap: '2px'}}>
                   <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
                   <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
                   <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
                 </div>
-                <span className="text-sm font-medium text-gray-600">Beneficiaries</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Beneficiaries ({switchData.beneficiaries.length})
+                </span>
               </div>
               <div className="space-y-2">
                 {switchData.beneficiaries.map((b, i) => (
@@ -248,7 +321,7 @@ export const MySwitches: FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   );
