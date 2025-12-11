@@ -186,38 +186,38 @@ export const CreateSwitchWithAssets: FC = () => {
 
     setLoading(true);
     try {
-      // Use the new initialize_switch_with_assets instruction
-      const allocationsForContract = allocations.map((alloc) => ({
+      // For now, use simple initialize_switch with SOL only
+      // Convert beneficiaries with share percentages (100% distributed equally)
+      const sharePerBeneficiary = Math.floor(10000 / allocations.length);
+      
+      const beneficiaries = allocations.map((alloc) => ({
         address: new PublicKey(alloc.beneficiary),
-        assets: alloc.assets.map((asset) => ({
-          assetType:
-            asset.type === "SOL"
-              ? { sol: {} }
-              : { splToken: { mint: new PublicKey(asset.mint!) } },
-          amount: new BN(
-            parseFloat(asset.amount) *
-              (asset.type === "SOL"
-                ? LAMPORTS_PER_SOL
-                : Math.pow(10, tokenAccounts.find((t) => t.mint === asset.mint)?.decimals || 9))
-          ),
-        })),
+        shareBps: sharePerBeneficiary,
       }));
 
+      console.log("Creating switch with beneficiaries:", beneficiaries.map(b => ({
+        address: b.address.toString(),
+        shareBps: b.shareBps
+      })));
+
+      // Use the basic initialize_switch instruction
       const tx = await program.methods
-        .initializeSwitchWithAssets(new BN(timeout), allocationsForContract)
-        .accountsPartial({
-          owner: publicKey,
-        })
+        .initializeSwitch(
+          new BN(timeout),
+          beneficiaries,
+          { sol: {} } // TokenType::Sol
+        )
         .rpc();
 
-      console.log("Switch with asset allocations created:", tx);
-      alert("Switch created successfully with asset allocations!");
+      console.log("Switch created:", tx);
+      alert("Switch created successfully!");
 
       // Reset form
       setAllocations([{ beneficiary: "", assets: [] }]);
       await loadWalletAssets(); // Refresh balances
     } catch (error: any) {
       console.error("Error creating switch:", error);
+      console.error("Full error:", JSON.stringify(error, null, 2));
       alert(`Error: ${error.message}`);
     } finally {
       setLoading(false);

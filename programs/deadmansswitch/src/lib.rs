@@ -6,18 +6,25 @@ declare_id!("BUE3LbNV3jkqGwE1E1ouvka3pcHuDvpLw4u9WT8oexxr");
 
 const MAX_BENEFICIARIES: usize = 10;
 const BASIS_POINTS_TOTAL: u16 = 10000; // 100.00%
+const MAX_SWITCH_ID_LEN: usize = 32;
 
 #[program]
 pub mod deadmansswitch {
     use super::*;
 
-    /// Initialize a new Dead Man's Switch
+    /// Initialize a new Dead Man's Switch with a unique ID
     pub fn initialize_switch(
         ctx: Context<InitializeSwitch>,
+        switch_id: String,
         timeout_seconds: i64,
         beneficiaries: Vec<Beneficiary>,
         token_type: TokenType,
     ) -> Result<()> {
+        require!(
+            switch_id.len() > 0 && switch_id.len() <= MAX_SWITCH_ID_LEN,
+            ErrorCode::InvalidSwitchId
+        );
+        
         require!(
             beneficiaries.len() > 0 && beneficiaries.len() <= MAX_BENEFICIARIES,
             ErrorCode::InvalidBeneficiaryCount
@@ -36,6 +43,7 @@ pub mod deadmansswitch {
         let clock = Clock::get()?;
 
         switch.owner = ctx.accounts.owner.key();
+        switch.switch_id = switch_id.clone();
         switch.beneficiaries = beneficiaries;
         switch.token_type = token_type;
         switch.timeout_seconds = timeout_seconds;
@@ -44,7 +52,8 @@ pub mod deadmansswitch {
         switch.bump = ctx.bumps.switch;
 
         msg!(
-            "Switch initialized. Deadline: {}",
+            "Switch '{}' initialized. Deadline: {}",
+            switch_id,
             switch.heartbeat_deadline
         );
 
@@ -54,9 +63,15 @@ pub mod deadmansswitch {
     /// Initialize a switch with specific asset allocations (enhanced version)
     pub fn initialize_switch_with_assets(
         ctx: Context<InitializeSwitch>,
+        switch_id: String,
         timeout_seconds: i64,
         allocations: Vec<BeneficiaryAllocation>,
     ) -> Result<()> {
+        require!(
+            switch_id.len() > 0 && switch_id.len() <= MAX_SWITCH_ID_LEN,
+            ErrorCode::InvalidSwitchId
+        );
+        
         require!(
             allocations.len() > 0 && allocations.len() <= MAX_BENEFICIARIES,
             ErrorCode::InvalidBeneficiaryCount
@@ -76,8 +91,8 @@ pub mod deadmansswitch {
         let clock = Clock::get()?;
 
         switch.owner = ctx.accounts.owner.key();
+        switch.switch_id = switch_id.clone();
         // Convert allocations to simple beneficiaries for backward compatibility
-        // In production, you'd want a separate Switch type or extend the existing one
         switch.beneficiaries = allocations.iter().map(|a| Beneficiary {
             address: a.address,
             share_bps: 0, // Not used in asset-based allocation
@@ -89,7 +104,8 @@ pub mod deadmansswitch {
         switch.bump = ctx.bumps.switch;
 
         msg!(
-            "Switch with asset allocations initialized. {} beneficiaries. Deadline: {}",
+            "Switch '{}' with asset allocations initialized. {} beneficiaries. Deadline: {}",
+            switch_id,
             allocations.len(),
             switch.heartbeat_deadline
         );
@@ -98,7 +114,7 @@ pub mod deadmansswitch {
     }
 
     /// Send a heartbeat to extend the deadline
-    pub fn send_heartbeat(ctx: Context<SendHeartbeat>) -> Result<()> {
+    pub fn send_heartbeat(ctx: Context<SendHeartbeat>, _switch_id: String) -> Result<()> {
         let switch = &mut ctx.accounts.switch;
 
         require!(
@@ -115,7 +131,7 @@ pub mod deadmansswitch {
     }
 
     /// Trigger expiry and distribute funds to beneficiaries
-    pub fn trigger_expiry(ctx: Context<TriggerExpiry>) -> Result<()> {
+    pub fn trigger_expiry(ctx: Context<TriggerExpiry>, _switch_id: String) -> Result<()> {
         let switch = &mut ctx.accounts.switch;
         let clock = Clock::get()?;
 
@@ -331,7 +347,7 @@ pub mod deadmansswitch {
     }
 
     /// Cancel the switch and return funds to owner
-    pub fn cancel_switch(ctx: Context<CancelSwitch>) -> Result<()> {
+    pub fn cancel_switch(ctx: Context<CancelSwitch>, switch_id: String) -> Result<()> {
         let switch = &mut ctx.accounts.switch;
 
         require!(
@@ -341,13 +357,13 @@ pub mod deadmansswitch {
 
         switch.status = SwitchStatus::Canceled;
 
-        msg!("Switch canceled by owner");
+        msg!("Switch '{}' canceled by owner", switch_id);
 
         Ok(())
     }
 
     /// Withdraw SOL after cancellation
-    pub fn withdraw_sol(ctx: Context<WithdrawSol>) -> Result<()> {
+    pub fn withdraw_sol(ctx: Context<WithdrawSol>, switch_id: String) -> Result<()> {
         let switch = &ctx.accounts.switch;
 
         require!(
@@ -362,10 +378,13 @@ pub mod deadmansswitch {
         require!(withdrawable > 0, ErrorCode::InsufficientFunds);
 
         let owner_key = switch.owner;
+        let switch_id_bytes = switch_id.as_bytes();
+        let escrow_bump = ctx.bumps.escrow;
         let seeds = &[
             b"escrow",
             owner_key.as_ref(),
-            &[switch.bump],
+            switch_id_bytes,
+            &[escrow_bump],
         ];
         let signer_seeds = &[&seeds[..]];
 
@@ -391,19 +410,20 @@ pub mod deadmansswitch {
 // ============================================================================
 
 #[derive(Accounts)]
+#[instruction(switch_id: String)]
 pub struct InitializeSwitch<'info> {
     #[account(
         init,
         payer = owner,
         space = 8 + Switch::INIT_SPACE,
-        seeds = [b"switch", owner.key().as_ref()],
+        seeds = [b"switch", owner.key().as_ref(), switch_id.as_bytes()],
         bump
     )]
     pub switch: Account<'info, Switch>,
     
     /// CHECK: PDA for holding escrow funds
     #[account(
-        seeds = [b"escrow", owner.key().as_ref()],
+        seeds = [b"escrow", owner.key().as_ref(), switch_id.as_bytes()],
         bump
     )]
     pub escrow: UncheckedAccount<'info>,
@@ -415,10 +435,11 @@ pub struct InitializeSwitch<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(switch_id: String)]
 pub struct SendHeartbeat<'info> {
     #[account(
         mut,
-        seeds = [b"switch", owner.key().as_ref()],
+        seeds = [b"switch", owner.key().as_ref(), switch_id.as_bytes()],
         bump = switch.bump,
         has_one = owner
     )]
@@ -428,10 +449,11 @@ pub struct SendHeartbeat<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(switch_id: String)]
 pub struct TriggerExpiry<'info> {
     #[account(
         mut,
-        seeds = [b"switch", switch.owner.as_ref()],
+        seeds = [b"switch", switch.owner.as_ref(), switch_id.as_bytes()],
         bump = switch.bump
     )]
     pub switch: Account<'info, Switch>,
@@ -440,15 +462,15 @@ pub struct TriggerExpiry<'info> {
 #[derive(Accounts)]
 pub struct DistributeSol<'info> {
     #[account(
-        seeds = [b"switch", switch.owner.as_ref()],
+        seeds = [b"switch", switch.owner.as_ref(), switch.switch_id.as_bytes()],
         bump = switch.bump
     )]
     pub switch: Account<'info, Switch>,
     
     #[account(
         mut,
-        seeds = [b"escrow", switch.owner.as_ref()],
-        bump = switch.bump
+        seeds = [b"escrow", switch.owner.as_ref(), switch.switch_id.as_bytes()],
+        bump
     )]
     /// CHECK: PDA escrow account
     pub escrow: UncheckedAccount<'info>,
@@ -463,14 +485,14 @@ pub struct DistributeSol<'info> {
 #[derive(Accounts)]
 pub struct DistributeSpl<'info> {
     #[account(
-        seeds = [b"switch", switch.owner.as_ref()],
+        seeds = [b"switch", switch.owner.as_ref(), switch.switch_id.as_bytes()],
         bump = switch.bump
     )]
     pub switch: Account<'info, Switch>,
     
     #[account(
-        seeds = [b"escrow", switch.owner.as_ref()],
-        bump = switch.bump
+        seeds = [b"escrow", switch.owner.as_ref(), switch.switch_id.as_bytes()],
+        bump
     )]
     /// CHECK: PDA escrow account
     pub escrow: UncheckedAccount<'info>,
@@ -490,15 +512,15 @@ pub struct DistributeSpl<'info> {
 #[derive(Accounts)]
 pub struct DistributeAsset<'info> {
     #[account(
-        seeds = [b"switch", switch.owner.as_ref()],
+        seeds = [b"switch", switch.owner.as_ref(), switch.switch_id.as_bytes()],
         bump = switch.bump
     )]
     pub switch: Account<'info, Switch>,
     
     #[account(
         mut,
-        seeds = [b"escrow", switch.owner.as_ref()],
-        bump = switch.bump
+        seeds = [b"escrow", switch.owner.as_ref(), switch.switch_id.as_bytes()],
+        bump
     )]
     /// CHECK: PDA escrow account
     pub escrow: UncheckedAccount<'info>,
@@ -520,22 +542,26 @@ pub struct DistributeAsset<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(switch_id: String)]
 pub struct CancelSwitch<'info> {
     #[account(
         mut,
-        seeds = [b"switch", owner.key().as_ref()],
+        close = owner,
+        seeds = [b"switch", owner.key().as_ref(), switch_id.as_bytes()],
         bump = switch.bump,
         has_one = owner
     )]
     pub switch: Account<'info, Switch>,
     
+    #[account(mut)]
     pub owner: Signer<'info>,
 }
 
 #[derive(Accounts)]
+#[instruction(switch_id: String)]
 pub struct WithdrawSol<'info> {
     #[account(
-        seeds = [b"switch", owner.key().as_ref()],
+        seeds = [b"switch", owner.key().as_ref(), switch_id.as_bytes()],
         bump = switch.bump,
         has_one = owner
     )]
@@ -543,8 +569,8 @@ pub struct WithdrawSol<'info> {
     
     #[account(
         mut,
-        seeds = [b"escrow", owner.key().as_ref()],
-        bump = switch.bump
+        seeds = [b"escrow", owner.key().as_ref(), switch_id.as_bytes()],
+        bump
     )]
     /// CHECK: PDA escrow account
     pub escrow: UncheckedAccount<'info>,
@@ -563,6 +589,8 @@ pub struct WithdrawSol<'info> {
 #[derive(InitSpace)]
 pub struct Switch {
     pub owner: Pubkey,                              // 32
+    #[max_len(MAX_SWITCH_ID_LEN)]
+    pub switch_id: String,                          // 4 + 32 = 36
     #[max_len(MAX_BENEFICIARIES)]
     pub beneficiaries: Vec<Beneficiary>,            // 4 + (10 * 34) = 344
     pub token_type: TokenType,                      // 1 + 32 = 33
@@ -617,6 +645,9 @@ pub enum SwitchStatus {
 
 #[error_code]
 pub enum ErrorCode {
+    #[msg("Invalid switch ID (1-32 characters allowed)")]
+    InvalidSwitchId,
+    
     #[msg("Invalid number of beneficiaries (1-10 allowed)")]
     InvalidBeneficiaryCount,
     

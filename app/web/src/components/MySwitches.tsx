@@ -18,6 +18,7 @@ export const MySwitches: FC = () => {
   const program = useProgram();
   const [switchData, setSwitchData] = useState<SwitchData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [canceling, setCanceling] = useState(false);
 
   useEffect(() => {
     if (publicKey && program) {
@@ -42,6 +43,30 @@ export const MySwitches: FC = () => {
       setSwitchData(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cancelSwitch = async () => {
+    if (!publicKey || !program) return;
+    
+    if (!confirm("Are you sure you want to cancel your switch? This cannot be undone.")) {
+      return;
+    }
+
+    setCanceling(true);
+    try {
+      const tx = await program.methods
+        .cancelSwitch()
+        .rpc();
+
+      console.log("Switch canceled:", tx);
+      alert("Switch canceled successfully!");
+      setSwitchData(null);
+    } catch (error: any) {
+      console.error("Error canceling switch:", error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setCanceling(false);
     }
   };
 
@@ -158,12 +183,21 @@ export const MySwitches: FC = () => {
                 {getStatusText(switchData.status)}
               </p>
             </div>
-            <button
-              onClick={loadSwitch}
-              className="text-sm font-medium text-purple-600 hover:text-purple-700 px-3 py-1 rounded-lg hover:bg-purple-100 transition-all"
-            >
-              Refresh
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={loadSwitch}
+                className="text-sm font-medium text-purple-600 hover:text-purple-700 px-3 py-1 rounded-lg hover:bg-purple-100 transition-all"
+              >
+                Refresh
+              </button>
+              <button
+                onClick={cancelSwitch}
+                disabled={canceling}
+                className="text-sm font-medium text-red-600 hover:text-red-700 px-3 py-1 rounded-lg hover:bg-red-100 transition-all disabled:opacity-50"
+              >
+                {canceling ? "Canceling..." : "Cancel Switch"}
+              </button>
+            </div>
           </div>
 
           <div className="space-y-3">

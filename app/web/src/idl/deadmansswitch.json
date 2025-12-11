@@ -42,19 +42,29 @@
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switch_id"
               }
             ]
           }
         },
         {
           "name": "owner",
+          "writable": true,
           "signer": true,
           "relations": [
             "switch"
           ]
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "switch_id",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "distribute_asset",
@@ -91,6 +101,11 @@
                 "kind": "account",
                 "path": "switch.owner",
                 "account": "Switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
+                "account": "Switch"
               }
             ]
           }
@@ -114,6 +129,11 @@
               {
                 "kind": "account",
                 "path": "switch.owner",
+                "account": "Switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
                 "account": "Switch"
               }
             ]
@@ -190,6 +210,11 @@
                 "kind": "account",
                 "path": "switch.owner",
                 "account": "Switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
+                "account": "Switch"
               }
             ]
           }
@@ -213,6 +238,11 @@
               {
                 "kind": "account",
                 "path": "switch.owner",
+                "account": "Switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
                 "account": "Switch"
               }
             ]
@@ -264,6 +294,11 @@
                 "kind": "account",
                 "path": "switch.owner",
                 "account": "Switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
+                "account": "Switch"
               }
             ]
           }
@@ -286,6 +321,11 @@
               {
                 "kind": "account",
                 "path": "switch.owner",
+                "account": "Switch"
+              },
+              {
+                "kind": "account",
+                "path": "switch.switch_id",
                 "account": "Switch"
               }
             ]
@@ -312,7 +352,7 @@
     {
       "name": "initialize_switch",
       "docs": [
-        "Initialize a new Dead Man's Switch"
+        "Initialize a new Dead Man's Switch with a unique ID"
       ],
       "discriminator": [
         107,
@@ -344,6 +384,10 @@
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switch_id"
               }
             ]
           }
@@ -366,6 +410,10 @@
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switch_id"
               }
             ]
           }
@@ -381,6 +429,10 @@
         }
       ],
       "args": [
+        {
+          "name": "switch_id",
+          "type": "string"
+        },
         {
           "name": "timeout_seconds",
           "type": "i64"
@@ -440,6 +492,10 @@
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switch_id"
               }
             ]
           }
@@ -462,6 +518,10 @@
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switch_id"
               }
             ]
           }
@@ -477,6 +537,10 @@
         }
       ],
       "args": [
+        {
+          "name": "switch_id",
+          "type": "string"
+        },
         {
           "name": "timeout_seconds",
           "type": "i64"
@@ -528,6 +592,10 @@
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switch_id"
               }
             ]
           }
@@ -540,7 +608,12 @@
           ]
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "_switch_id",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "trigger_expiry",
@@ -578,12 +651,21 @@
                 "kind": "account",
                 "path": "switch.owner",
                 "account": "Switch"
+              },
+              {
+                "kind": "arg",
+                "path": "switch_id"
               }
             ]
           }
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "_switch_id",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "withdraw_sol",
@@ -619,6 +701,10 @@
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switch_id"
               }
             ]
           }
@@ -642,6 +728,10 @@
               {
                 "kind": "account",
                 "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "switch_id"
               }
             ]
           }
@@ -659,7 +749,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "switch_id",
+          "type": "string"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -680,56 +775,61 @@
   "errors": [
     {
       "code": 6000,
+      "name": "InvalidSwitchId",
+      "msg": "Invalid switch ID (1-32 characters allowed)"
+    },
+    {
+      "code": 6001,
       "name": "InvalidBeneficiaryCount",
       "msg": "Invalid number of beneficiaries (1-10 allowed)"
     },
     {
-      "code": 6001,
+      "code": 6002,
       "name": "InvalidShareDistribution",
       "msg": "Beneficiary shares must sum to 10000 basis points (100%)"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "InvalidTimeout",
       "msg": "Timeout must be positive"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "SwitchNotActive",
       "msg": "Switch is not active"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "DeadlineNotPassed",
       "msg": "Deadline has not passed yet"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "SwitchNotExpired",
       "msg": "Switch has not expired"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "SwitchNotCanceled",
       "msg": "Switch has not been canceled"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "InvalidTokenType",
       "msg": "Invalid token type for this operation"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "InsufficientFunds",
       "msg": "Insufficient funds in escrow"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "BeneficiaryNotFound",
       "msg": "Beneficiary not found"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "InvalidAssetAllocation",
       "msg": "Invalid asset allocation - beneficiary must have at least one asset"
     }
@@ -821,6 +921,10 @@
           {
             "name": "owner",
             "type": "pubkey"
+          },
+          {
+            "name": "switch_id",
+            "type": "string"
           },
           {
             "name": "beneficiaries",
