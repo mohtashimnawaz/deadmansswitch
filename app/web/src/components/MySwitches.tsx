@@ -23,6 +23,7 @@ export const MySwitches: FC = () => {
   const [loading, setLoading] = useState(false);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [sendingHeartbeatId, setSendingHeartbeatId] = useState<string | null>(null);
+  const [distributingId, setDistributingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (publicKey && program) {
@@ -116,6 +117,47 @@ export const MySwitches: FC = () => {
       alert(`Error: ${error.message}`);
     } finally {
       setSendingHeartbeatId(null);
+    }
+  };
+
+  const triggerExpiryAndDistribute = async (switchData: SwitchData) => {
+    if (!program) return;
+
+    setDistributingId(switchData.switchId);
+    try {
+      // First, trigger expiry to mark the switch as expired
+      console.log("Triggering expiry for switch:", switchData.switchId);
+      const expiryTx = await program.methods
+        .triggerExpiry(switchData.switchId)
+        .rpc();
+      
+      console.log("Expiry triggered:", expiryTx);
+
+      // Then distribute to all beneficiaries
+      for (const beneficiary of switchData.beneficiaries) {
+        console.log("Distributing to beneficiary:", beneficiary.address.toString());
+        try {
+          const distributeTx = await program.methods
+            .distributeSol()
+            .accounts({
+              beneficiary: beneficiary.address,
+            })
+            .rpc();
+          
+          console.log("Distribution tx:", distributeTx);
+        } catch (distError: any) {
+          console.error("Distribution error for beneficiary:", distError);
+          // Continue to next beneficiary even if one fails
+        }
+      }
+
+      alert("Switch expired and funds distributed to all beneficiaries!");
+      await loadSwitches();
+    } catch (error: any) {
+      console.error("Error in expiry/distribution:", error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setDistributingId(null);
     }
   };
 
@@ -247,7 +289,7 @@ export const MySwitches: FC = () => {
                 </p>
               </div>
               <div className="flex gap-2">
-                {switchData.status.active && (
+                {switchData.status.active && getTimeRemaining(switchData.heartbeatDeadline) !== "EXPIRED" && (
                   <button
                     onClick={() => sendHeartbeat(switchData.switchId)}
                     disabled={sendingHeartbeatId === switchData.switchId}
@@ -256,7 +298,16 @@ export const MySwitches: FC = () => {
                     {sendingHeartbeatId === switchData.switchId ? "Sending..." : "Send Heartbeat"}
                   </button>
                 )}
-                {switchData.status.active && (
+                {switchData.status.active && getTimeRemaining(switchData.heartbeatDeadline) === "EXPIRED" && (
+                  <button
+                    onClick={() => triggerExpiryAndDistribute(switchData)}
+                    disabled={distributingId === switchData.switchId}
+                    className="text-sm font-medium text-orange-600 hover:text-orange-700 px-3 py-1 rounded-lg hover:bg-orange-100 transition-all disabled:opacity-50"
+                  >
+                    {distributingId === switchData.switchId ? "Distributing..." : "Distribute Funds"}
+                  </button>
+                )}
+                {switchData.status.active && getTimeRemaining(switchData.heartbeatDeadline) !== "EXPIRED" && (
                   <button
                     onClick={() => cancelSwitch(switchData.switchId)}
                     disabled={cancelingId === switchData.switchId}

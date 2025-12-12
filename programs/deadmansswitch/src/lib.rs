@@ -196,12 +196,23 @@ pub mod deadmansswitch {
 
         // Transfer from escrow PDA to beneficiary
         let owner_key = switch.owner;
+        let switch_id_bytes = switch.switch_id.as_bytes();
+        
         let seeds = &[
             b"escrow",
             owner_key.as_ref(),
-            &[switch.bump],
+            switch_id_bytes,
         ];
-        let signer_seeds = &[&seeds[..]];
+        
+        // Find the bump from the PDA derivation
+        let (_, bump) = Pubkey::find_program_address(seeds, ctx.program_id);
+        let seeds_with_bump = &[
+            b"escrow",
+            owner_key.as_ref(),
+            switch_id_bytes,
+            &[bump],
+        ];
+        let signer_seeds = &[&seeds_with_bump[..]];
 
         let cpi_context = CpiContext::new_with_signer(
             ctx.accounts.system_program.to_account_info(),
