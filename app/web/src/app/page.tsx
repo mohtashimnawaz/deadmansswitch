@@ -1,96 +1,140 @@
 "use client";
 
+import { useState } from "react";
 import dynamic from "next/dynamic";
-import { CreateSwitchWithAssets } from "@/components/CreateSwitchWithAssets";
-import { MySwitches } from "@/components/MySwitches";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { Dashboard } from "@/components/Dashboard";
+import { CreateSwitch } from "@/components/CreateSwitch";
 import { Heartbeat } from "@/components/Heartbeat";
+import { MySwitches } from "@/components/MySwitches";
+import { Icons, Tabs, Badge } from "@/components/ui";
 
 const WalletMultiButton = dynamic(
-  () => import("@solana/wallet-adapter-react-ui").then(mod => ({ default: mod.WalletMultiButton })),
+  () => import("@solana/wallet-adapter-react-ui").then((mod) => ({ default: mod.WalletMultiButton })),
   { ssr: false }
 );
 
+type TabId = "dashboard" | "create" | "heartbeat" | "switches";
+
 export default function Home() {
+  const { publicKey } = useWallet();
+  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+
+  const tabs = [
+    { id: "dashboard", label: "Dashboard", icon: <Icons.Activity className="w-4 h-4" /> },
+    { id: "create", label: "Create", icon: <Icons.Plus className="w-4 h-4" /> },
+    { id: "heartbeat", label: "Heartbeat", icon: <Icons.Heart className="w-4 h-4" /> },
+    { id: "switches", label: "Switches", icon: <Icons.Shield className="w-4 h-4" /> },
+  ];
+
   return (
-    <main className="min-h-screen flex flex-col relative">
+    <div className="min-h-screen bg-grid-pattern bg-noise">
+      {/* Background gradient */}
+      <div className="fixed inset-0 bg-gradient-radial pointer-events-none" />
+      
       {/* Header */}
-      <nav className="w-full backdrop-blur-xl shadow-lg relative z-10" style={{
-        background: 'rgba(255, 255, 255, 0.85)',
-        borderBottom: '2px solid rgba(139, 92, 246, 0.2)'
-      }}>
-        <div className="px-8">
-          <div className="flex justify-between items-center h-24">
-            <div className="flex items-center gap-4">
-              <div className="animated-icon">
-                <div className="clock-icon"></div>
+      <header className="sticky top-0 z-40 glass">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 md:h-20">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <Icons.Shield className="w-5 h-5 md:w-6 md:h-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-purple-600">
-                  Dead Man's Switch
-                </h1>
-                <p className="text-sm text-gray-700 font-medium">Secure Your Digital Legacy</p>
+              <div className="hidden sm:block">
+                <h1 className="text-lg md:text-xl font-bold text-white">Dead Man's Switch</h1>
+                <p className="text-xs text-zinc-400">Solana Digital Legacy</p>
               </div>
             </div>
-            <WalletMultiButton className="!rounded-xl !font-semibold !shadow-lg hover:!shadow-xl !transition-all !duration-300 !text-lg !px-8 !py-4" style={{
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)'
-            }} />
+
+            {/* Desktop Nav */}
+            <div className="hidden md:block">
+              <Tabs
+                tabs={tabs}
+                activeTab={activeTab}
+                onChange={(id) => setActiveTab(id as TabId)}
+              />
+            </div>
+
+            {/* Wallet Button */}
+            <div className="flex items-center gap-3">
+              {publicKey && (
+                <Badge variant="success" className="hidden sm:flex">
+                  <div className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse" />
+                  Connected
+                </Badge>
+              )}
+              <WalletMultiButton />
+            </div>
           </div>
         </div>
 
-        {/* Hero Section */}
-        <div className="backdrop-blur-lg py-8 px-8 relative overflow-hidden" style={{
-          background: 'rgba(139, 92, 246, 0.1)',
-          borderTop: '1px solid rgba(139, 92, 246, 0.2)'
-        }}>
-          <div className="text-center relative z-10">
-            <h2 className="text-3xl font-bold text-purple-600 mb-3">
-              Protect What Matters Most
-            </h2>
-            <p className="text-base text-gray-700 max-w-3xl mx-auto">
-              Automatically distribute your digital assets to beneficiaries if you stop sending heartbeats.
-              Peace of mind for you and your loved ones.
-            </p>
+        {/* Mobile Nav */}
+        <div className="md:hidden border-t border-zinc-800/50">
+          <div className="flex justify-around py-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as TabId)}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${
+                  activeTab === tab.id
+                    ? "text-purple-400"
+                    : "text-zinc-500"
+                }`}
+              >
+                {tab.icon}
+                <span className="text-xs">{tab.label}</span>
+              </button>
+            ))}
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto relative z-10 px-8 py-12">
-        <div className="max-w-7xl mx-auto space-y-12">
-          
-          {/* Zigzag Item 1 - Right Aligned */}
-          <div className="flex justify-end">
-            <div className="w-full max-w-3xl">
-              <CreateSwitchWithAssets />
-            </div>
-          </div>
-
-          {/* Connector Line */}
-          <div className="flex justify-center">
-            <div className="w-0.5 h-16 bg-gradient-to-b from-purple-400 to-purple-200"></div>
-          </div>
-
-          {/* Zigzag Item 2 - Left Aligned */}
-          <div className="flex justify-start">
-            <div className="w-full max-w-3xl">
-              <Heartbeat />
-            </div>
-          </div>
-
-          {/* Connector Line */}
-          <div className="flex justify-center">
-            <div className="w-0.5 h-16 bg-gradient-to-b from-purple-400 to-purple-200"></div>
-          </div>
-
-          {/* Zigzag Item 3 - Right Aligned */}
-          <div className="flex justify-end">
-            <div className="w-full max-w-3xl">
-              <MySwitches />
-            </div>
-          </div>
-          
+      {/* Main Content */}
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        {/* Page Header */}
+        <div className="mb-6 md:mb-8 animate-fade-in">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            {activeTab === "dashboard" && "Dashboard"}
+            {activeTab === "create" && "Create Switch"}
+            {activeTab === "heartbeat" && "Send Heartbeat"}
+            {activeTab === "switches" && "My Switches"}
+          </h2>
+          <p className="text-zinc-400">
+            {activeTab === "dashboard" && "Overview of your digital legacy protection"}
+            {activeTab === "create" && "Set up a new Dead Man's Switch"}
+            {activeTab === "heartbeat" && "Keep your switches active"}
+            {activeTab === "switches" && "Manage your existing switches"}
+          </p>
         </div>
-      </div>
-    </main>
+
+        {/* Tab Content */}
+        <div className="animate-fade-in" key={activeTab}>
+          {activeTab === "dashboard" && <Dashboard />}
+          {activeTab === "create" && <CreateSwitch />}
+          {activeTab === "heartbeat" && <Heartbeat />}
+          {activeTab === "switches" && <MySwitches />}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-zinc-800/50 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-zinc-500 text-sm">
+              <Icons.Shield className="w-4 h-4" />
+              <span>Dead Man's Switch on Solana</span>
+            </div>
+            <div className="flex items-center gap-6 text-zinc-500 text-sm">
+              <a href="https://devnet.solana.com" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors">
+                Devnet
+              </a>
+              <span className="text-zinc-700">•</span>
+              <span>Built with ❤️</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

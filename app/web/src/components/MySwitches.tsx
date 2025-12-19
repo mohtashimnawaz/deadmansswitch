@@ -1,9 +1,21 @@
 "use client";
 
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useState, useCallback } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { useProgram } from "@/hooks/useProgram";
+import {
+  Icons,
+  CardHeader,
+  Badge,
+  Spinner,
+  EmptyState,
+  AddressDisplay,
+  Countdown,
+  TimeDisplay,
+  Modal,
+  useToast,
+} from "@/components/ui";
 
 interface SwitchData {
   publicKey: PublicKey;
@@ -19,30 +31,24 @@ export const MySwitches: FC = () => {
   const { publicKey } = useWallet();
   const { connection } = useConnection();
   const program = useProgram();
+  const { addToast } = useToast();
+  
   const [switches, setSwitches] = useState<SwitchData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [cancelingId, setCancelingId] = useState<string | null>(null);
-  const [sendingHeartbeatId, setSendingHeartbeatId] = useState<string | null>(null);
-  const [distributingId, setDistributingId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [selectedSwitch, setSelectedSwitch] = useState<SwitchData | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  useEffect(() => {
-    if (publicKey && program) {
-      loadSwitches();
-    }
-  }, [publicKey, program]);
-
-  const loadSwitches = async () => {
+  const loadSwitches = useCallback(async () => {
     if (!publicKey || !program) return;
 
     setLoading(true);
     try {
-      // Use getProgramAccounts to fetch all switches for this owner
       const allAccounts = await connection.getProgramAccounts(program.programId, {
         filters: [
-          // Anchor account discriminator for Switch (8 bytes) + owner pubkey offset
           {
             memcmp: {
-              offset: 8, // After discriminator
+              offset: 8,
               bytes: publicKey.toBase58(),
             },
           },
@@ -67,6 +73,13 @@ export const MySwitches: FC = () => {
         }
       }
 
+      // Sort: Active first, then by deadline
+      switchDataList.sort((a, b) => {
+        if (a.status.active && !b.status.active) return -1;
+        if (!a.status.active && b.status.active) return 1;
+        return a.heartbeatDeadline - b.heartbeatDeadline;
+      });
+
       setSwitches(switchDataList);
     } catch (error: any) {
       console.error("Error loading switches:", error);
@@ -74,306 +87,327 @@ export const MySwitches: FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [publicKey, program, connection]);
 
-  const cancelSwitch = async (switchId: string) => {
-    if (!publicKey || !program) return;
-    
-    if (!confirm(`Are you sure you want to cancel switch "${switchId}"? This will close the account.`)) {
-      return;
+  useEffect(() => {
+    if (publicKey && program) {
+      loadSwitches();
     }
+  }, [publicKey, program, loadSwitches]);
 
-    setCancelingId(switchId);
+  const cancelSwitch = async (switchData: SwitchData) => {
+    if (!publicKey || !program) return;
+
+    setActionLoading(switchData.switchId);
     try {
-      const tx = await program.methods
-        .cancelSwitch(switchId)
-        .rpc();
+      const tx = await program.methods.cancelSwitch(switchData.switchId).rpc();
 
       console.log("Switch canceled:", tx);
-      alert("Switch canceled successfully!");
+      addToast("success", "Switch canceled", "Account has been closed");
       await loadSwitches();
     } catch (error: any) {
       console.error("Error canceling switch:", error);
-      alert(`Error: ${error.message}`);
+      addToast("error", "Cancel failed", error.message);
     } finally {
-      setCancelingId(null);
+      setActionLoading(null);
     }
   };
 
   const sendHeartbeat = async (switchId: string) => {
     if (!publicKey || !program) return;
 
-    setSendingHeartbeatId(switchId);
+    setActionLoading(switchId);
     try {
-      const tx = await program.methods
-        .sendHeartbeat(switchId)
-        .rpc();
+      const tx = await program.methods.sendHeartbeat(switchId).rpc();
 
       console.log("Heartbeat sent:", tx);
-      alert("Heartbeat sent successfully!");
+      addToast("success", "Heartbeat sent!", "Deadline extended");
       await loadSwitches();
     } catch (error: any) {
       console.error("Error sending heartbeat:", error);
-      alert(`Error: ${error.message}`);
+      addToast("error", "Heartbeat failed", error.message);
     } finally {
-      setSendingHeartbeatId(null);
+      setActionLoading(null);
     }
   };
 
-  const triggerExpiryAndDistribute = async (switchData: SwitchData) => {
+  const triggerDistribution = async (switchData: SwitchData) => {
     if (!program) return;
 
-    setDistributingId(switchData.switchId);
+    setActionLoading(switchData.switchId);
     try {
-      // First, trigger expiry to mark the switch as expired
-      console.log("Triggering expiry for switch:", switchData.switchId);
-      const expiryTx = await program.methods
-        .triggerExpiry(switchData.switchId)
-        .rpc();
-      
+      // Trigger expiry
+      const expiryTx = await program.methods.triggerExpiry(switchData.switchId).rpc();
       console.log("Expiry triggered:", expiryTx);
 
-      // Then distribute to all beneficiaries
+      // Distribute to beneficiaries
       for (const beneficiary of switchData.beneficiaries) {
-        console.log("Distributing to beneficiary:", beneficiary.address.toString());
         try {
           const distributeTx = await program.methods
             .distributeSol()
-            .accounts({
-              beneficiary: beneficiary.address,
-            })
+            .accounts({ beneficiary: beneficiary.address })
             .rpc();
-          
           console.log("Distribution tx:", distributeTx);
         } catch (distError: any) {
-          console.error("Distribution error for beneficiary:", distError);
-          // Continue to next beneficiary even if one fails
+          console.error("Distribution error:", distError);
         }
       }
 
-      alert("Switch expired and funds distributed to all beneficiaries!");
+      addToast("success", "Distribution complete", "Assets sent to beneficiaries");
       await loadSwitches();
     } catch (error: any) {
-      console.error("Error in expiry/distribution:", error);
-      alert(`Error: ${error.message}`);
+      console.error("Error in distribution:", error);
+      addToast("error", "Distribution failed", error.message);
     } finally {
-      setDistributingId(null);
+      setActionLoading(null);
     }
   };
 
-  const getTimeRemaining = (deadline: number): string => {
+  const getStatusInfo = (switchData: SwitchData) => {
     const now = Math.floor(Date.now() / 1000);
-    const remaining = deadline - now;
+    const remaining = switchData.heartbeatDeadline - now;
 
-    if (remaining <= 0) return "EXPIRED";
-
-    const days = Math.floor(remaining / 86400);
-    const hours = Math.floor((remaining % 86400) / 3600);
-    const minutes = Math.floor((remaining % 3600) / 60);
-
-    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-    return `${hours}h ${minutes}m`;
+    if (switchData.status.canceled) {
+      return { label: "Canceled", variant: "info" as const, icon: Icons.X };
+    }
+    if (switchData.status.expired || remaining <= 0) {
+      return { label: "Expired", variant: "danger" as const, icon: Icons.AlertCircle };
+    }
+    if (remaining < 86400) {
+      return { label: "Urgent", variant: "warning" as const, icon: Icons.Clock };
+    }
+    return { label: "Active", variant: "success" as const, icon: Icons.Check };
   };
 
-  const getStatusColor = (status: any): string => {
-    if (status.active) return "text-green-600";
-    if (status.expired) return "text-red-600";
-    if (status.canceled) return "text-gray-600";
-    return "text-gray-600";
+  const isExpired = (switchData: SwitchData) => {
+    const now = Math.floor(Date.now() / 1000);
+    return switchData.heartbeatDeadline - now <= 0;
   };
 
-  const getStatusText = (status: any): string => {
-    if (status.active) return "Active";
-    if (status.expired) return "Expired";
-    if (status.canceled) return "Canceled";
-    return "Unknown";
+  const viewDetails = (switchData: SwitchData) => {
+    setSelectedSwitch(switchData);
+    setShowDetailsModal(true);
   };
 
   if (!publicKey) {
     return (
-      <div className="card p-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="animated-icon">
-            <div className="chart-icon">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
-        </div>
-        <div className="text-center py-8">
-          <p className="text-gray-600">Connect your wallet to view your switches</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="card p-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="animated-icon">
-            <div className="chart-icon">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
-        </div>
-        <div className="text-center py-8">
-          <div className="w-12 h-12 mx-auto mb-4 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (switches.length === 0) {
-    return (
-      <div className="card p-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="animated-icon">
-            <div className="chart-icon">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">My Switches</h2>
-        </div>
-        <div className="text-center py-8">
-          <p className="text-gray-600">No switches found. Create one to get started!</p>
-        </div>
+      <div className="card-static p-8">
+        <EmptyState
+          icon={<Icons.Wallet className="w-8 h-8 text-zinc-500" />}
+          title="Wallet not connected"
+          description="Connect your wallet to view and manage your switches."
+        />
       </div>
     );
   }
 
   return (
-    <div className="card p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="animated-icon">
-            <div className="chart-icon">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">My Switches ({switches.length})</h2>
+    <div className="card-static p-6 md:p-8">
+      <CardHeader
+        icon={<Icons.Activity className="w-6 h-6 text-white" />}
+        title="My Switches"
+        subtitle={switches.length > 0 ? `${switches.length} total` : undefined}
+        action={
+          <button onClick={loadSwitches} disabled={loading} className="btn-ghost">
+            {loading ? <Spinner size="sm" /> : <Icons.Refresh className="w-5 h-5" />}
+          </button>
+        }
+      />
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Spinner size="lg" />
         </div>
-        <button
-          onClick={loadSwitches}
-          className="text-sm font-medium text-purple-600 hover:text-purple-700 px-3 py-1 rounded-lg hover:bg-purple-100 transition-all"
-        >
-          Refresh All
-        </button>
-      </div>
+      ) : switches.length === 0 ? (
+        <EmptyState
+          icon={<Icons.Shield className="w-8 h-8 text-zinc-500" />}
+          title="No switches found"
+          description="Create your first Dead Man's Switch to protect your digital assets."
+        />
+      ) : (
+        <div className="space-y-4">
+          {switches.map((switchData, index) => {
+            const statusInfo = getStatusInfo(switchData);
+            const expired = isExpired(switchData);
+            const StatusIcon = statusInfo.icon;
 
-      <div className="space-y-4">
-        {switches.map((switchData) => (
-          <div 
-            key={switchData.switchId} 
-            className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-1">{switchData.switchId}</h3>
-                <p className={`text-sm font-medium ${getStatusColor(switchData.status)}`}>
-                  {getStatusText(switchData.status)}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                {switchData.status.active && getTimeRemaining(switchData.heartbeatDeadline) !== "EXPIRED" && (
-                  <button
-                    onClick={() => sendHeartbeat(switchData.switchId)}
-                    disabled={sendingHeartbeatId === switchData.switchId}
-                    className="text-sm font-medium text-green-600 hover:text-green-700 px-3 py-1 rounded-lg hover:bg-green-100 transition-all disabled:opacity-50"
-                  >
-                    {sendingHeartbeatId === switchData.switchId ? "Sending..." : "Send Heartbeat"}
-                  </button>
-                )}
-                {switchData.status.active && getTimeRemaining(switchData.heartbeatDeadline) === "EXPIRED" && (
-                  <button
-                    onClick={() => triggerExpiryAndDistribute(switchData)}
-                    disabled={distributingId === switchData.switchId}
-                    className="text-sm font-medium text-orange-600 hover:text-orange-700 px-3 py-1 rounded-lg hover:bg-orange-100 transition-all disabled:opacity-50"
-                  >
-                    {distributingId === switchData.switchId ? "Distributing..." : "Distribute Funds"}
-                  </button>
-                )}
-                {switchData.status.active && getTimeRemaining(switchData.heartbeatDeadline) !== "EXPIRED" && (
-                  <button
-                    onClick={() => cancelSwitch(switchData.switchId)}
-                    disabled={cancelingId === switchData.switchId}
-                    className="text-sm font-medium text-red-600 hover:text-red-700 px-3 py-1 rounded-lg hover:bg-red-100 transition-all disabled:opacity-50"
-                  >
-                    {cancelingId === switchData.switchId ? "Canceling..." : "Cancel"}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="bg-white/60 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="clock-icon" style={{width: '16px', height: '16px', borderWidth: '2px'}}></div>
-                  <span className="text-sm font-medium text-gray-600">Timeout Period</span>
-                </div>
-                <span className="text-lg font-bold text-gray-800">
-                  {Math.floor(switchData.timeoutSeconds / 3600)} hours
-                </span>
-                <span className="text-sm text-gray-600 ml-2">
-                  ({Math.floor(switchData.timeoutSeconds / 86400)} days)
-                </span>
-              </div>
-
-              <div className="bg-white/60 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="heart-icon" style={{width: '16px', height: '16px', borderWidth: '2px'}}></div>
-                  <span className="text-sm font-medium text-gray-600">Time Remaining</span>
-                </div>
-                <span className={`text-lg font-bold ${
-                  getTimeRemaining(switchData.heartbeatDeadline) === "EXPIRED" 
-                    ? "text-red-600" 
-                    : "text-gray-800"
-                }`}>
-                  {getTimeRemaining(switchData.heartbeatDeadline)}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-3 bg-white/60 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <div style={{display: 'flex', gap: '2px'}}>
-                  <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
-                  <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
-                  <div style={{width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%'}}></div>
-                </div>
-                <span className="text-sm font-medium text-gray-600">
-                  Beneficiaries ({switchData.beneficiaries.length})
-                </span>
-              </div>
-              <div className="space-y-2">
-                {switchData.beneficiaries.map((b, i) => (
-                  <div key={i} className="bg-white rounded-lg p-3 border border-gray-200">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-purple-600">Beneficiary {i + 1}</span>
-                      <span className="text-sm font-bold text-gray-800">{(b.shareBps / 100).toFixed(0)}%</span>
+            return (
+              <div
+                key={switchData.switchId}
+                className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 transition-all animate-fade-in"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center">
+                      <Icons.Shield className="w-6 h-6 text-purple-400" />
                     </div>
-                    <div className="text-xs text-gray-600 font-mono truncate">{b.address.toString()}</div>
+                    <div>
+                      <h3 className="font-bold text-white text-lg">{switchData.switchId}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant={statusInfo.variant}>
+                          <StatusIcon className="w-3 h-3 mr-1" />
+                          {statusInfo.label}
+                        </Badge>
+                        <span className="text-xs text-zinc-500">
+                          {switchData.beneficiaries.length} beneficiar{switchData.beneficiaries.length === 1 ? "y" : "ies"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => viewDetails(switchData)}
+                    className="btn-ghost text-xs"
+                  >
+                    Details
+                  </button>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="p-3 rounded-lg bg-zinc-800/50">
+                    <div className="flex items-center gap-2 text-zinc-500 text-xs mb-1">
+                      <Icons.Clock className="w-3.5 h-3.5" />
+                      <span>Time Remaining</span>
+                    </div>
+                    <Countdown deadline={switchData.heartbeatDeadline} className="text-lg font-bold" />
+                  </div>
+                  <div className="p-3 rounded-lg bg-zinc-800/50">
+                    <div className="flex items-center gap-2 text-zinc-500 text-xs mb-1">
+                      <Icons.Refresh className="w-3.5 h-3.5" />
+                      <span>Timeout Period</span>
+                    </div>
+                    <TimeDisplay seconds={switchData.timeoutSeconds} className="text-lg font-bold text-white" />
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 flex-wrap">
+                  {switchData.status.active && !expired && (
+                    <>
+                      <button
+                        onClick={() => sendHeartbeat(switchData.switchId)}
+                        disabled={actionLoading === switchData.switchId}
+                        className="btn-success flex-1"
+                      >
+                        {actionLoading === switchData.switchId ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <Icons.Heart className="w-4 h-4" />
+                        )}
+                        Heartbeat
+                      </button>
+                      <button
+                        onClick={() => cancelSwitch(switchData)}
+                        disabled={actionLoading === switchData.switchId}
+                        className="btn-danger"
+                      >
+                        <Icons.X className="w-4 h-4" />
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                  {switchData.status.active && expired && (
+                    <button
+                      onClick={() => triggerDistribution(switchData)}
+                      disabled={actionLoading === switchData.switchId}
+                      className="btn-warning flex-1"
+                    >
+                      {actionLoading === switchData.switchId ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <Icons.Send className="w-4 h-4" />
+                      )}
+                      Distribute Funds
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Details Modal */}
+      <Modal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        title={selectedSwitch?.switchId || "Switch Details"}
+        size="lg"
+      >
+        {selectedSwitch && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 rounded-lg bg-zinc-800/50">
+                <p className="text-xs text-zinc-500 mb-1">Status</p>
+                <Badge variant={getStatusInfo(selectedSwitch).variant}>
+                  {getStatusInfo(selectedSwitch).label}
+                </Badge>
+              </div>
+              <div className="p-3 rounded-lg bg-zinc-800/50">
+                <p className="text-xs text-zinc-500 mb-1">Time Remaining</p>
+                <Countdown deadline={selectedSwitch.heartbeatDeadline} />
+              </div>
+              <div className="p-3 rounded-lg bg-zinc-800/50">
+                <p className="text-xs text-zinc-500 mb-1">Timeout Period</p>
+                <TimeDisplay seconds={selectedSwitch.timeoutSeconds} className="font-semibold text-white" />
+              </div>
+              <div className="p-3 rounded-lg bg-zinc-800/50">
+                <p className="text-xs text-zinc-500 mb-1">Beneficiaries</p>
+                <p className="font-semibold text-white">{selectedSwitch.beneficiaries.length}</p>
+              </div>
+            </div>
+
+            <div className="divider" />
+
+            <div>
+              <h4 className="font-semibold text-white mb-3">Beneficiaries</h4>
+              <div className="space-y-2">
+                {selectedSwitch.beneficiaries.map((b, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-sm font-semibold">
+                        {i + 1}
+                      </div>
+                      <AddressDisplay address={b.address.toString()} />
+                    </div>
+                    <Badge variant="purple">{(b.shareBps / 100).toFixed(0)}%</Badge>
                   </div>
                 ))}
               </div>
             </div>
+
+            <div className="divider" />
+
+            <div className="flex gap-2">
+              {selectedSwitch.status.active && !isExpired(selectedSwitch) && (
+                <>
+                  <button
+                    onClick={() => {
+                      sendHeartbeat(selectedSwitch.switchId);
+                      setShowDetailsModal(false);
+                    }}
+                    className="btn-success flex-1"
+                  >
+                    <Icons.Heart className="w-4 h-4" /> Send Heartbeat
+                  </button>
+                  <button
+                    onClick={() => {
+                      cancelSwitch(selectedSwitch);
+                      setShowDetailsModal(false);
+                    }}
+                    className="btn-danger"
+                  >
+                    <Icons.X className="w-4 h-4" /> Cancel
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        ))}
-      </div>
+        )}
+      </Modal>
     </div>
   );
 };
