@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/components/WalletProvider";
+import TubelightSignature from "@/components/TubelightSignature";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -35,7 +36,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} bg-[#0a0a0f]`}>
-        <WalletProvider>{children}</WalletProvider>
+        <WalletProvider>
+          {children}
+          <TubelightSignature />
+        </WalletProvider>
       </body>
     </html>
   );

@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  relayer:
+    build: .
+    image: deadman-relayer:latest
+    restart: unless-stopped
+    environment:
+      - RPC_URL=${RPC_URL:-https://api.devnet.solana.com}
+      - PROGRAM_ID=${PROGRAM_ID}
+      - KEYPAIR_PATH=/app/keypair.json
+    volumes:
+      - ${LOCAL_KEYPAIR_PATH:-./keypair.json}:/app/keypair.json:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,13 @@
+# render.yaml template for a web service using a Docker image
+services:
+  - type: web
+    name: deadman-relayer
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    image: yourdockerhubuser/deadman-relayer:latest
+    envVars:
+      - key: RPC_URL
+        value: https://api.devnet.solana.com
+      - key: PROGRAM_ID
+        value: BUE3LbNV3jkqGwE1E1ouvka3pcHuDvpLw4u9WT8oexxr

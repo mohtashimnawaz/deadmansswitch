@@ -1,0 +1,10 @@
+# fly.toml template
+# Replace app = "your-fly-app-name" with your Fly app name
+app = "your-fly-app-name"
+
+[build]
+  image = "yourdockerhubuser/deadman-relayer:latest"
+
+[env]
+  RPC_URL = "https://api.devnet.solana.com"
+  PROGRAM_ID = "BUE3LbNV3jkqGwE1E1ouvka3pcHuDvpLw4u9WT8oexxr"

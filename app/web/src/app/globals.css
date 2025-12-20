@@ -30,6 +30,10 @@
   
   --glow-purple: 0 0 40px rgba(139, 92, 246, 0.3);
   --glow-blue: 0 0 40px rgba(99, 102, 241, 0.3);
+  --font-jetbrains-mono: 'JetBrains Mono', monospace;
+  /* Tubelight signature color (RGB components) - ties into theme accent */
+  --tubelight-rgb: 139, 92, 246; /* default matches --accent-primary (#8b5cf6) */
+  --tubelight-bg: rgba(0, 0, 0, 0.8);
 }
 
 @layer base {
@@ -398,6 +402,84 @@
 .icon-container-sm { @apply w-8 h-8; }
 .icon-container-md { @apply w-10 h-10; }
 .icon-container-lg { @apply w-12 h-12; }
+
+/* Tubelight signature watermark */
+
+.tubelight-signature {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  background: var(--tubelight-bg);
+  border: 1px solid rgba(var(--tubelight-rgb), 0.28);
+  border-radius: 8px;
+  color: rgb(var(--tubelight-rgb));
+  text-decoration: none;
+  text-shadow: 0 0 10px rgba(var(--tubelight-rgb), 0.45);
+  transition: all 0.3s ease;
+  animation: tubelight-flicker 3s ease-in-out;
+  backdrop-filter: blur(12px);
+  letter-spacing: 0.05em;
+}
+
+.tubelight-signature:hover {
+  color: rgb(var(--tubelight-rgb));
+  text-shadow: 0 0 20px rgba(var(--tubelight-rgb), 0.85), 0 0 30px rgba(var(--tubelight-rgb), 0.6);
+  border-color: rgba(var(--tubelight-rgb), 0.6);
+  transform: translateY(-2px);
+  background: rgba(0, 0, 0, 0.92);
+}
+
+@keyframes tubelight-flicker {
+  0% {
+    opacity: 0;
+    text-shadow: none;
+  }
+  10% {
+    opacity: 0.3;
+    text-shadow: 0 0 5px rgba(var(--tubelight-rgb), 0.28);
+  }
+  15% {
+    opacity: 0;
+    text-shadow: none;
+  }
+  25% {
+    opacity: 0.6;
+    text-shadow: 0 0 8px rgba(var(--tubelight-rgb), 0.36);
+  }
+  30% {
+    opacity: 0.2;
+    text-shadow: 0 0 3px rgba(var(--tubelight-rgb), 0.2);
+  }
+  40% {
+    opacity: 0.8;
+    text-shadow: 0 0 10px rgba(var(--tubelight-rgb), 0.5);
+  }
+  45% {
+    opacity: 0.4;
+    text-shadow: 0 0 5px rgba(var(--tubelight-rgb), 0.28);
+  }
+  55% {
+    opacity: 0.9;
+    text-shadow: 0 0 12px rgba(var(--tubelight-rgb), 0.6);
+  }
+  60% {
+    opacity: 0.7;
+    text-shadow: 0 0 8px rgba(var(--tubelight-rgb), 0.5);
+  }
+  70% {
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(var(--tubelight-rgb), 0.5);
+  }
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(147, 51, 234, 0.5);
+  }
+}
 
 /* SOL icon styling */
 .sol-icon {
